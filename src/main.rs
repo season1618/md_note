@@ -39,9 +39,9 @@ use crate::Span::*;
 
 #[derive(Clone)]
 enum Block {
+    Header { spans: Vec<Span>, level: u32 },
     Paragraph { spans: Vec<Span> },
     LineBreak,
-    Header { spans: Vec<Span>, level: i32 },
     Blockquote { spans: Vec<Span> },
     List { items: Vec<ListItem> },
     CodeBlock { code: String },
@@ -96,7 +96,47 @@ impl Convertor {
     }
 
     fn parse_block(&mut self) {
+        let c = self.doc[self.pos];
+        if self.expect("# ") {
+            self.parse_header(1);
+            return;
+        }
+        if self.expect("## ") {
+            self.parse_header(2);
+            return;
+        }
+        if self.expect("### ") {
+            self.parse_header(3);
+            return;
+        }
+        if self.expect("#### ") {
+            self.parse_header(4);
+            return;
+        }
+        if self.expect("##### ") {
+            self.parse_header(5);
+            return;
+        }
+        if self.expect("###### ") {
+            self.parse_header(6);
+            return;
+        }
         self.parse_paragraph();
+    }
+
+    fn parse_header(&mut self, level: u32) {
+        let mut text = "".to_string();
+        while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            if c == '\n' {
+                self.elem_list.push(Header { spans: vec![ Text { text } ], level: level });
+                self.pos += 1;
+                return;
+            }
+            
+            text.push(c);
+            self.pos += 1;
+        }
     }
 
     fn parse_paragraph(&mut self) {
@@ -114,10 +154,21 @@ impl Convertor {
         }
     }
 
+    fn expect(&mut self, s: &str) -> bool {
+        let cs: Vec<char> = s.chars().collect();
+        for i in 0..s.len() {
+            if self.doc[self.pos + i] != cs[i] {
+                return false;
+            }
+        }
+        self.pos += s.len();
+        return true;
+    }
+
     fn gen_html(&self, dest: &mut File) {
-        write!(dest, "<!DOCTYPE html>\n");
-        write!(dest, "<html>\n");
-        write!(dest, "<head>\n");
+        writeln!(dest, "<!DOCTYPE html>");
+        writeln!(dest, "<html>");
+        writeln!(dest, "<head>");
         write!(dest, "  <meta charset=\"utf-8\">\n");
         write!(dest, "  <link rel=\"stylesheet\" href=\"./index.css\">\n");
         write!(dest, "  <title></title>\n");
@@ -142,7 +193,17 @@ impl Convertor {
     fn gen_content(&self, dest: &mut File) {
         for block in &self.elem_list {
             match block {
+                Header { spans, level } => { self.gen_header(spans, level, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
+                _ => {},
+            }
+        }
+    }
+
+    fn gen_header(&self, spans: &Vec<Span>, level: &u32, dest: &mut File) {
+        for span in spans {
+            match span {
+                Text { text } => { write!(dest, "      <h{}>{}</h{}>\n", *level, *text, *level); },
                 _ => {},
             }
         }
