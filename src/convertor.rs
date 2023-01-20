@@ -243,6 +243,10 @@ impl Convertor {
         let mut text = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
+            if c == '\n' || c == '\r' {
+                self.pos += 1;
+                return Text { text: format!("{}{}", ind.to_string(), text) };
+            }
             if self.expect(ind) {
                 break;
             }
