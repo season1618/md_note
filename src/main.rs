@@ -14,7 +14,7 @@ fn main(){
         conv.parse_markdown();
         conv.gen_html(&mut dest);
     } else {
-        println!("could not open the file.\n");
+        println!("could not open the file.");
     }
 
     // match File::open(file_path) {
@@ -23,7 +23,7 @@ fn main(){
     //             if let Ok(s) = result {
     //                 conv.parse_block(s);
     //             } else {
-    //                 println!("could not read a line.\n");
+    //                 println!("could not read a line.");
     //                 break;
     //             }
     //         }
@@ -85,73 +85,59 @@ impl Convertor {
 
     fn parse_markdown(&mut self) {
         while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if c == '\n' {
-                self.pos += 1;
-                continue;
-            }
-
-            self.parse_block();
+            let block = self.parse_block();
+            self.elem_list.push(block);
         }
     }
 
-    fn parse_block(&mut self) {
+    fn parse_block(&mut self) -> Block {
         let c = self.doc[self.pos];
         if self.expect("# ") {
-            self.parse_header(1);
-            return;
+            return self.parse_header(1);
         }
         if self.expect("## ") {
-            self.parse_header(2);
-            return;
+            return self.parse_header(2);
         }
         if self.expect("### ") {
-            self.parse_header(3);
-            return;
+            return self.parse_header(3);
         }
         if self.expect("#### ") {
-            self.parse_header(4);
-            return;
+            return self.parse_header(4);
         }
         if self.expect("##### ") {
-            self.parse_header(5);
-            return;
+            return self.parse_header(5);
         }
         if self.expect("###### ") {
-            self.parse_header(6);
-            return;
+            return self.parse_header(6);
         }
-        self.parse_paragraph();
+        return self.parse_paragraph();
     }
 
-    fn parse_header(&mut self, level: u32) {
+    fn parse_header(&mut self, level: u32) -> Block {
+        return Header { spans: vec![ self.parse_span() ], level: level };
+    }
+
+    fn parse_paragraph(&mut self) -> Block {
+        return Paragraph { spans: vec![ self.parse_span() ] };
+    }
+
+    fn parse_span(&mut self) -> Span {
+        return self.parse_text();
+    }
+
+    fn parse_text(&mut self) -> Span {
         let mut text = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
-            if c == '\n' {
-                self.elem_list.push(Header { spans: vec![ Text { text } ], level: level });
+            if c == '\n' || c == '\r' {
                 self.pos += 1;
-                return;
+                break;
             }
             
             text.push(c);
             self.pos += 1;
-        }
-    }
-
-    fn parse_paragraph(&mut self) {
-        let mut text = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if c == '\n' {
-                self.elem_list.push(Paragraph { spans: vec![ Text { text } ] });
-                self.pos += 1;
-                return;
-            }
-            
-            text.push(c);
-            self.pos += 1;
-        }
+        }//println!("{}", text);
+        return Text { text };
     }
 
     fn expect(&mut self, s: &str) -> bool {
@@ -169,25 +155,25 @@ impl Convertor {
         writeln!(dest, "<!DOCTYPE html>");
         writeln!(dest, "<html>");
         writeln!(dest, "<head>");
-        write!(dest, "  <meta charset=\"utf-8\">\n");
-        write!(dest, "  <link rel=\"stylesheet\" href=\"./index.css\">\n");
-        write!(dest, "  <title></title>\n");
-        write!(dest, "</head>\n");
-        write!(dest, "<body>\n");
+        writeln!(dest, "  <meta charset=\"utf-8\">");
+        writeln!(dest, "  <link rel=\"stylesheet\" href=\"./index.css\">");
+        writeln!(dest, "  <title></title>");
+        writeln!(dest, "</head>");
+        writeln!(dest, "<body>");
         
-        write!(dest, "  <div id=\"wrapper\">\n");
+        writeln!(dest, "  <div id=\"wrapper\">");
 
-        write!(dest, "    <nav id=\"sidebar\">\n");
-        write!(dest, "    </nav>\n");
+        writeln!(dest, "    <nav id=\"sidebar\">");
+        writeln!(dest, "    </nav>");
 
-        write!(dest, "    <div id=\"content\">\n");
+        writeln!(dest, "    <div id=\"content\">");
         
         self.gen_content(dest);
 
-        write!(dest, "    <div>\n");
+        writeln!(dest, "    <div>");
 
-        write!(dest, "</body>\n");
-        write!(dest, "</html>\n");
+        writeln!(dest, "</body>");
+        writeln!(dest, "</html>");
     }
 
     fn gen_content(&self, dest: &mut File) {
@@ -203,7 +189,7 @@ impl Convertor {
     fn gen_header(&self, spans: &Vec<Span>, level: &u32, dest: &mut File) {
         for span in spans {
             match span {
-                Text { text } => { write!(dest, "      <h{}>{}</h{}>\n", *level, *text, *level); },
+                Text { text } => { writeln!(dest, "      <h{}>{}</h{}>", *level, *text, *level); },
                 _ => {},
             }
         }
@@ -212,7 +198,7 @@ impl Convertor {
     fn gen_paragraph(&self, spans: &Vec<Span>, dest: &mut File) {
         for span in spans {
             match span {
-                Text { text } => { write!(dest, "      <p>{}</p>\n", *text); },
+                Text { text } => { writeln!(dest, "      <p>{}</p>", *text); },
                 _ => {},
             }
         }
