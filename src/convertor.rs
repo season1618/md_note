@@ -60,6 +60,8 @@ impl Convertor {
 
     fn parse_block(&mut self) -> Block {
         let c = self.doc[self.pos];
+
+        // header
         if self.expect("# ") {
             return self.parse_header(1);
         }
@@ -78,11 +80,22 @@ impl Convertor {
         if self.expect("###### ") {
             return self.parse_header(6);
         }
+
+        // blockquote
+        if self.expect("> ") {
+            return self.parse_blockquote();
+        }
+
+        // paragraph
         self.parse_paragraph()
     }
 
     fn parse_header(&mut self, level: u32) -> Block {
         Header { spans: self.parse_spans(), level: level }
+    }
+
+    fn parse_blockquote(&mut self) -> Block {
+        Blockquote { spans: self.parse_spans() }
     }
 
     fn parse_paragraph(&mut self) -> Block {
@@ -237,6 +250,7 @@ impl Convertor {
         for block in &self.elem_list {
             match block {
                 Header { spans, level } => { self.gen_header(spans, level, dest); },
+                Blockquote { spans } => { self.gen_blockquote(spans, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
                 _ => {},
             }
@@ -247,6 +261,12 @@ impl Convertor {
         write!(dest, "      <h{}>", *level);
         self.gen_spans(spans, dest);
         writeln!(dest, "</h{}>", *level);
+    }
+
+    fn gen_blockquote(&self, spans: &Vec<Span>, dest: &mut File) {
+        write!(dest, "      <blockquote>");
+        self.gen_spans(spans, dest);
+        writeln!(dest, "</blockquote>");
     }
 
     fn gen_paragraph(&self, spans: &Vec<Span>, dest: &mut File) {
