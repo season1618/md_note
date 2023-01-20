@@ -86,6 +86,11 @@ impl Convertor {
             return self.parse_blockquote();
         }
 
+        // list
+        if c == '*' || c == '+' || c == '-' {
+            return self.parse_list(0);
+        }
+
         // paragraph
         self.parse_paragraph()
     }
@@ -96,6 +101,32 @@ impl Convertor {
 
     fn parse_blockquote(&mut self) -> Block {
         Blockquote { spans: self.parse_spans() }
+    }
+
+    fn parse_list(&mut self, indent: u32) -> Block {
+        let mut items: Vec<ListItem> = Vec::new();
+        while self.pos < self.doc.len() {
+            // let num = 0;
+            // while self.pos < self.doc.len() {
+            //     let c = self.doc[self.pos];
+            //     if c == ' ' {
+            //         num += 1;
+            //     } else {
+            //         break;
+            //     }
+            //     self.pos += 1;
+            // }
+            let c = self.doc[self.pos];
+            if self.expect("* ") || self.expect("+ ") || self.expect("- ") {
+                items.push(ListItem {
+                    spans: self.parse_spans(),
+                    list: None,
+                });
+            } else {
+                break;
+            }
+        }
+        List { items }
     }
 
     fn parse_paragraph(&mut self) -> Block {
@@ -203,7 +234,7 @@ impl Convertor {
     fn expect(&mut self, s: &str) -> bool {
         let cs: Vec<char> = s.chars().collect();
         for i in 0..s.len() {
-            if self.doc[self.pos + i] != cs[i] {
+            if self.pos + i < self.doc.len() && self.doc[self.pos + i] != cs[i] {
                 return false;
             }
         }
@@ -251,6 +282,7 @@ impl Convertor {
             match block {
                 Header { spans, level } => { self.gen_header(spans, level, dest); },
                 Blockquote { spans } => { self.gen_blockquote(spans, dest); },
+                List { items } => { self.gen_list(items, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
                 _ => {},
             }
@@ -267,6 +299,18 @@ impl Convertor {
         write!(dest, "      <blockquote>");
         self.gen_spans(spans, dest);
         writeln!(dest, "</blockquote>");
+    }
+
+    fn gen_list(&self, items: &Vec<ListItem>, dest: &mut File) {
+        writeln!(dest, "      <ul>");
+        for item in items {
+            write!(dest, "        <li>");
+            match item {
+                ListItem { spans, .. } => { self.gen_spans(spans, dest); }
+            }
+            writeln!(dest, "      </li>");
+        }
+        writeln!(dest, "      </ul>");
     }
 
     fn gen_paragraph(&self, spans: &Vec<Span>, dest: &mut File) {
