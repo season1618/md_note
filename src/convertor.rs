@@ -91,6 +91,11 @@ impl Convertor {
             return self.parse_list(-1);
         }
 
+        // code block
+        if self.expect("```") {
+            return self.parse_code_block();
+        }
+
         // paragraph
         self.parse_paragraph()
     }
@@ -133,6 +138,29 @@ impl Convertor {
             }
         }
         List { items }
+    }
+
+    fn parse_code_block(&mut self) -> Block {
+        while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            if c == '\n' || c == '\r' {
+                self.pos += 1;
+                break;
+            }
+            self.pos += 1;
+        }
+
+        let mut code = "".to_string();
+        while self.pos < self.doc.len() {
+            if self.expect("```") {
+                self.pos += 4;
+                break;
+            }
+            code.push(self.doc[self.pos]);
+            self.pos += 1;
+        }
+
+        CodeBlock { code }
     }
 
     fn parse_paragraph(&mut self) -> Block {
@@ -290,6 +318,7 @@ impl Convertor {
                 Blockquote { spans } => { self.gen_blockquote(spans, dest); },
                 List { items } => { self.gen_list(items, 0, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
+                CodeBlock { code } => { self.gen_code_block(code, dest); },
                 _ => {},
             }
         }
@@ -331,6 +360,12 @@ impl Convertor {
         }
         for i in 0..(3 + indent) { write!(dest, "  "); }
         writeln!(dest, "</ul>");
+    }
+
+    fn gen_code_block(&self, code: &String, dest: &mut File) {
+        write!(dest, "      <pre>");
+        write!(dest, "{}", code);
+        writeln!(dest, "</pre>");
     }
 
     fn gen_paragraph(&self, spans: &Vec<Span>, dest: &mut File) {
