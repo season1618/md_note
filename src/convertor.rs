@@ -27,7 +27,7 @@ enum Span {
 #[derive(Clone)]
 struct ListItem {
     spans: Vec<Span>,
-    list: Option<Span>,
+    list: Block,
 }
 
 #[derive(Clone)]
@@ -88,7 +88,7 @@ impl Convertor {
 
         // list
         if c == '*' || c == '+' || c == '-' {
-            return self.parse_list(0);
+            return self.parse_list(-1);
         }
 
         // paragraph
@@ -103,25 +103,31 @@ impl Convertor {
         Blockquote { spans: self.parse_spans() }
     }
 
-    fn parse_list(&mut self, indent: u32) -> Block {
+    fn parse_list(&mut self, indent: i32) -> Block {
         let mut items: Vec<ListItem> = Vec::new();
         while self.pos < self.doc.len() {
-            // let num = 0;
-            // while self.pos < self.doc.len() {
-            //     let c = self.doc[self.pos];
-            //     if c == ' ' {
-            //         num += 1;
-            //     } else {
-            //         break;
-            //     }
-            //     self.pos += 1;
-            // }
-            let c = self.doc[self.pos];
-            if self.expect("* ") || self.expect("+ ") || self.expect("- ") {
-                items.push(ListItem {
-                    spans: self.parse_spans(),
-                    list: None,
-                });
+            let mut num = 0;
+            while self.pos + num < self.doc.len() {
+                let c = self.doc[self.pos + num];
+                if c == ' ' {
+                    num += 1;
+                } else {
+                    break;
+                }
+            }
+
+            let c1 = self.doc[self.pos + num];
+            let c2 = self.doc[self.pos + num + 1];
+            if (c1 == '*' || c1 == '+' || c1 == '-') && c2 == ' ' {
+                if indent < num as i32 {
+                    self.pos += num + 2;
+                    items.push(ListItem {
+                        spans: self.parse_spans(),
+                        list: self.parse_list(num as i32),
+                    });
+                } else {
+                    break;
+                }
             } else {
                 break;
             }
@@ -282,7 +288,7 @@ impl Convertor {
             match block {
                 Header { spans, level } => { self.gen_header(spans, level, dest); },
                 Blockquote { spans } => { self.gen_blockquote(spans, dest); },
-                List { items } => { self.gen_list(items, dest); },
+                List { items } => { self.gen_list(items, 0, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
                 _ => {},
             }
@@ -301,16 +307,30 @@ impl Convertor {
         writeln!(dest, "</blockquote>");
     }
 
-    fn gen_list(&self, items: &Vec<ListItem>, dest: &mut File) {
-        writeln!(dest, "      <ul>");
+    fn gen_list(&self, items: &Vec<ListItem>, indent: u32, dest: &mut File) {
+        for i in 0..(3 + indent) { write!(dest, "  "); }
+        writeln!(dest, "<ul>");
         for item in items {
-            write!(dest, "        <li>");
+            for i in 0..(4 + indent) { write!(dest, "  "); }
+            writeln!(dest, "<li>");
             match item {
-                ListItem { spans, .. } => { self.gen_spans(spans, dest); }
+                ListItem { spans, list } => {
+                    for i in 0..(5 + indent) { write!(dest, "  "); }
+                    self.gen_spans(spans, dest);
+                    writeln!(dest);
+                    match list {
+                        List { items: nested_items } => {
+                            if !nested_items.is_empty() { self.gen_list(nested_items, indent + 2, dest); }
+                        },
+                        _ => {},
+                    }
+                }
             }
-            writeln!(dest, "      </li>");
+            for i in 0..(4 + indent) { write!(dest, "  "); }
+            writeln!(dest, "</li>");
         }
-        writeln!(dest, "      </ul>");
+        for i in 0..(3 + indent) { write!(dest, "  "); }
+        writeln!(dest, "</ul>");
     }
 
     fn gen_paragraph(&self, spans: &Vec<Span>, dest: &mut File) {
