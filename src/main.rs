@@ -16,22 +16,6 @@ fn main(){
     } else {
         println!("could not open the file.");
     }
-
-    // match File::open(file_path) {
-    //     Ok(src) => {
-    //         for result in BufReader::new(src).lines() {
-    //             if let Ok(s) = result {
-    //                 conv.parse_block(s);
-    //             } else {
-    //                 println!("could not read a line.");
-    //                 break;
-    //             }
-    //         }
-    //     },
-    //     Err(err) => {
-    //         println!("could not open {}: {}", file_path, err);
-    //     },
-    // }
 }
 
 use crate::Block::*;
@@ -114,15 +98,60 @@ impl Convertor {
     }
 
     fn parse_header(&mut self, level: u32) -> Block {
-        return Header { spans: vec![ self.parse_span() ], level: level };
+        return Header { spans: self.parse_spans(), level: level };
     }
 
     fn parse_paragraph(&mut self) -> Block {
-        return Paragraph { spans: vec![ self.parse_span() ] };
+        return Paragraph { spans: self.parse_spans() };
     }
 
-    fn parse_span(&mut self) -> Span {
-        return self.parse_text();
+    fn parse_spans(&mut self) -> Vec<Span> {
+        let mut spans = Vec::new();
+        while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            if c == '\n' || c == '\r' {
+                self.pos += 1;
+                break;
+            }
+            if c == '[' {
+                spans.push(self.parse_link());
+                continue;
+            }
+            spans.push(self.parse_text());
+        }
+        return spans;
+    }
+
+    // fn parse_span(&mut self) -> Span {
+    //     return self.parse_text();
+    // }
+
+    fn parse_link(&mut self) -> Span {
+        self.consume("[");
+
+        let title = self.parse_link_text();
+
+        self.consume("]");
+        self.consume("(");
+
+        let url = self.parse_link_text();
+
+        self.consume(")");
+
+        Link { title, url }
+    }
+
+    fn parse_link_text(&mut self) -> String { // do not include []()
+        let mut text = "".to_string();
+        while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            if c == '[' || c == ']' || c == '(' || c == ')' { // redundant
+                break;
+            }
+            text.push(c);
+            self.pos += 1;
+        }
+        text
     }
 
     fn parse_text(&mut self) -> Span {
@@ -136,7 +165,7 @@ impl Convertor {
             
             text.push(c);
             self.pos += 1;
-        }//println!("{}", text);
+        }
         return Text { text };
     }
 
@@ -149,6 +178,16 @@ impl Convertor {
         }
         self.pos += s.len();
         return true;
+    }
+
+    fn consume(&mut self, s: &str) {
+        let cs: Vec<char> = s.chars().collect();
+        for i in 0..s.len() {
+            if self.doc[self.pos + i] != cs[i] {
+                panic!("syntax error");
+            }
+        }
+        self.pos += s.len();
     }
 
     fn gen_html(&self, dest: &mut File) {
@@ -187,20 +226,32 @@ impl Convertor {
     }
 
     fn gen_header(&self, spans: &Vec<Span>, level: &u32, dest: &mut File) {
+        write!(dest, "      <h{}>", *level);
+        self.gen_spans(spans, dest);
+        writeln!(dest, "</h{}>", *level);
+    }
+
+    fn gen_paragraph(&self, spans: &Vec<Span>, dest: &mut File) {
+        write!(dest, "      <p>");
+        self.gen_spans(spans, dest);
+        writeln!(dest, "</p>");
+    }
+
+    fn gen_spans(&self, spans: &Vec<Span>, dest: &mut File) {
         for span in spans {
             match span {
-                Text { text } => { writeln!(dest, "      <h{}>{}</h{}>", *level, *text, *level); },
+                Link { title, url } => { self.gen_link(title, url, dest); },
+                Text { text } => { self.gen_text(text, dest); },
                 _ => {},
             }
         }
     }
 
-    fn gen_paragraph(&self, spans: &Vec<Span>, dest: &mut File) {
-        for span in spans {
-            match span {
-                Text { text } => { writeln!(dest, "      <p>{}</p>", *text); },
-                _ => {},
-            }
-        }
+    fn gen_link(&self, title: &String, url: &String, dest: &mut File) {
+        write!(dest, "<a href=\"{}\">{}</a>", *url, *title);
+    }
+
+    fn gen_text(&self, text: &String, dest: &mut File) {
+        write!(dest, "{}", text);
     }
 }
