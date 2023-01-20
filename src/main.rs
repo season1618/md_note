@@ -20,6 +20,7 @@ fn main(){
 
 use crate::Block::*;
 use crate::Span::*;
+use crate::EmphasisKind::*;
 
 #[derive(Clone)]
 enum Block {
@@ -33,11 +34,11 @@ enum Block {
 
 #[derive(Clone)]
 enum Span {
-    Text { text: String },
     Link { title: String, url: String },
-    Emphasis { kind: EmphasisKind, spans: Vec<Span> },
+    Emphasis { kind: EmphasisKind, text: String },
     Code { code: String },
     Image { url: String },
+    Text { text: String },
 }
 
 #[derive(Clone)]
@@ -94,15 +95,15 @@ impl Convertor {
         if self.expect("###### ") {
             return self.parse_header(6);
         }
-        return self.parse_paragraph();
+        self.parse_paragraph()
     }
 
     fn parse_header(&mut self, level: u32) -> Block {
-        return Header { spans: self.parse_spans(), level: level };
+        Header { spans: self.parse_spans(), level: level }
     }
 
     fn parse_paragraph(&mut self) -> Block {
-        return Paragraph { spans: self.parse_spans() };
+        Paragraph { spans: self.parse_spans() }
     }
 
     fn parse_spans(&mut self) -> Vec<Span> {
@@ -113,18 +114,35 @@ impl Convertor {
                 self.pos += 1;
                 break;
             }
+
+            // link
             if c == '[' {
                 spans.push(self.parse_link());
                 continue;
             }
+
+            // emphasis
+            if self.expect("**") {
+                spans.push(self.parse_emphasis("**"));
+                continue;
+            }
+            if self.expect("__") {
+                spans.push(self.parse_emphasis("__"));
+                continue;
+            }
+            if self.expect("*") {
+                spans.push(self.parse_emphasis("*"));
+                continue;
+            }
+            if self.expect("_") {
+                spans.push(self.parse_emphasis("_"));
+                continue;
+            }
+
             spans.push(self.parse_text());
         }
-        return spans;
+        spans
     }
-
-    // fn parse_span(&mut self) -> Span {
-    //     return self.parse_text();
-    // }
 
     fn parse_link(&mut self) -> Span {
         self.consume("[");
@@ -154,6 +172,23 @@ impl Convertor {
         text
     }
 
+    fn parse_emphasis(&mut self, ind: &str) -> Span {
+        let mut text = "".to_string();
+        while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            if self.expect(ind) {
+                break;
+            }
+            text.push(c);
+            self.pos += 1;
+        }
+        if ind == "*" || ind == "_" {
+            return Emphasis { kind: Em, text };
+        } else {
+            return Emphasis { kind: Strong, text };
+        }
+    }
+
     fn parse_text(&mut self) -> Span {
         let mut text = "".to_string();
         while self.pos < self.doc.len() {
@@ -166,7 +201,7 @@ impl Convertor {
             text.push(c);
             self.pos += 1;
         }
-        return Text { text };
+        Text { text }
     }
 
     fn expect(&mut self, s: &str) -> bool {
@@ -241,6 +276,7 @@ impl Convertor {
         for span in spans {
             match span {
                 Link { title, url } => { self.gen_link(title, url, dest); },
+                Emphasis { kind, text } => { self.gen_emphasis(kind, text, dest); },
                 Text { text } => { self.gen_text(text, dest); },
                 _ => {},
             }
@@ -249,6 +285,13 @@ impl Convertor {
 
     fn gen_link(&self, title: &String, url: &String, dest: &mut File) {
         write!(dest, "<a href=\"{}\">{}</a>", *url, *title);
+    }
+
+    fn gen_emphasis(&self, kind: &EmphasisKind, text: &String, dest: &mut File) {
+        match *kind {
+            Em => { write!(dest, "<em>{}</em>", *text); },
+            Strong => { write!(dest, "<strong>{}</strong>", *text); },
+        }
     }
 
     fn gen_text(&self, text: &String, dest: &mut File) {
