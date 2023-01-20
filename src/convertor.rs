@@ -8,11 +8,11 @@ use EmphasisKind::*;
 #[derive(Clone)]
 enum Block {
     Header { spans: Vec<Span>, level: u32 },
-    Paragraph { spans: Vec<Span> },
     LineBreak,
     Blockquote { spans: Vec<Span> },
     List { items: Vec<ListItem> },
     CodeBlock { code: String },
+    Paragraph { spans: Vec<Span> },
 }
 
 #[derive(Clone)]
@@ -153,7 +153,6 @@ impl Convertor {
         let mut code = "".to_string();
         while self.pos < self.doc.len() {
             if self.expect("```") {
-                self.pos += 4;
                 break;
             }
             code.push(self.doc[self.pos]);
@@ -200,6 +199,13 @@ impl Convertor {
                 continue;
             }
 
+            // code
+            if self.expect("`") {
+                spans.push(self.parse_code());
+                continue;
+            }
+
+            // text
             spans.push(self.parse_text());
         }
         spans
@@ -208,29 +214,29 @@ impl Convertor {
     fn parse_link(&mut self) -> Span {
         self.consume("[");
 
-        let title = self.parse_link_text();
-
-        self.consume("]");
-        self.consume("(");
-
-        let url = self.parse_link_text();
-
-        self.consume(")");
-
-        Link { title, url }
-    }
-
-    fn parse_link_text(&mut self) -> String { // do not include []()
-        let mut text = "".to_string();
+        let title = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
-            if c == '[' || c == ']' || c == '(' || c == ')' { // redundant
+            self.pos += 1;
+            if c == ']' {
                 break;
             }
-            text.push(c);
-            self.pos += 1;
         }
-        text
+        
+        if self.expect("(") {
+            let url = "".to_string();
+            while self.pos < self.doc.len() {
+                let c = self.doc[self.pos];
+                self.pos += 1;
+                if c == ')' {
+                    break;
+                }
+            }
+
+            Link { title, url }
+        } else { // exception
+            Text { text: title }
+        }
     }
 
     fn parse_emphasis(&mut self, ind: &str) -> Span {
@@ -250,6 +256,19 @@ impl Convertor {
         }
     }
 
+    fn parse_code(&mut self) -> Span {
+        let mut code = "".to_string();
+        while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            self.pos += 1;
+            if c == '`' {
+                break;
+            }
+            code.push(c);
+        }
+        Code { code }
+    }
+
     fn parse_text(&mut self) -> Span {
         let mut text = "".to_string();
         while self.pos < self.doc.len() {
@@ -258,7 +277,9 @@ impl Convertor {
                 self.pos += 1;
                 break;
             }
-            
+            if c == '[' || c == '`' || c == '*' || c == '_' {
+                break;
+            }
             text.push(c);
             self.pos += 1;
         }
@@ -379,6 +400,7 @@ impl Convertor {
             match span {
                 Link { title, url } => { self.gen_link(title, url, dest); },
                 Emphasis { kind, text } => { self.gen_emphasis(kind, text, dest); },
+                Code { code } => { self.gen_code(code, dest); },
                 Text { text } => { self.gen_text(text, dest); },
                 _ => {},
             }
@@ -394,6 +416,10 @@ impl Convertor {
             Em => { write!(dest, "<em>{}</em>", *text); },
             Strong => { write!(dest, "<strong>{}</strong>", *text); },
         }
+    }
+
+    fn gen_code(&self, code: &String, dest: &mut File) {
+        write!(dest, "<code>{}</code>", *code);
     }
 
     fn gen_text(&self, text: &String, dest: &mut File) {
