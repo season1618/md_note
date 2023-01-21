@@ -281,6 +281,12 @@ impl Convertor {
                 continue;
             }
 
+            // image
+            if self.expect("![]") {
+                spans.push(self.parse_image());
+                continue;
+            }
+
             // text
             spans.push(self.parse_text());
         }
@@ -347,6 +353,20 @@ impl Convertor {
             code.push(c);
         }
         Code { code }
+    }
+
+    fn parse_image(&mut self) -> Span {
+        self.consume("(");
+        let mut url = "".to_string();
+        while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            if self.expect(")") {
+                break;
+            }
+            url.push(c);
+            self.pos += 1;
+        }
+        Image { url }
     }
 
     fn parse_text(&mut self) -> Span {
@@ -485,6 +505,7 @@ impl Convertor {
                 Link { title, url } => { self.gen_link(title, url, dest); },
                 Emphasis { kind, text } => { self.gen_emphasis(kind, text, dest); },
                 Code { code } => { self.gen_code(code, dest); },
+                Image { url } => { self.gen_image(url, dest); },
                 Text { text } => { self.gen_text(text, dest); },
                 _ => {},
             }
@@ -504,6 +525,10 @@ impl Convertor {
 
     fn gen_code(&self, code: &String, dest: &mut File) {
         write!(dest, "<code>{}</code>", *code);
+    }
+
+    fn gen_image(&self, url: &String, dest: &mut File) {
+        write!(dest, "<img src=\"{}\">", *url);
     }
 
     fn gen_text(&self, text: &String, dest: &mut File) {
