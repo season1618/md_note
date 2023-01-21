@@ -39,7 +39,9 @@ enum EmphasisKind {
 pub struct Convertor {
     doc: Vec<char>,
     pos: usize,
-    elem_list: Vec<Block>,
+    title: String,
+    sidebar: Block,
+    content: Vec<Block>,
 }
 
 impl Convertor {
@@ -47,14 +49,16 @@ impl Convertor {
         Convertor {
             doc: doc.chars().collect(),
             pos: 0,
-            elem_list: Vec::new(),
+            title: "".to_string(),
+            sidebar: List { items: Vec::new() },
+            content: Vec::new(),
         }
     }
 
     pub fn parse_markdown(&mut self) {
         while self.pos < self.doc.len() {
             let block = self.parse_block();
-            self.elem_list.push(block);
+            self.content.push(block);
         }
     }
 
@@ -101,7 +105,20 @@ impl Convertor {
     }
 
     fn parse_header(&mut self, level: u32) -> Block {
-        Header { spans: self.parse_spans(), level: level }
+        let spans = self.parse_spans();
+        if level == 1 {
+            self.title = "".to_string();
+            for span in &spans {
+                match span {
+                    Link { title: t, .. } => { self.title.push_str(t); },
+                    Emphasis { text, .. } => { self.title.push_str(text); },
+                    Code { code } => { self.title.push_str(code); },
+                    Text { text } => { self.title.push_str(text); },
+                    _ => {},
+                }
+            }
+        }
+        Header { spans, level }
     }
 
     fn parse_blockquote(&mut self) -> Block {
@@ -314,7 +331,7 @@ impl Convertor {
         writeln!(dest, "<head>");
         writeln!(dest, "  <meta charset=\"utf-8\">");
         writeln!(dest, "  <link rel=\"stylesheet\" href=\"./index.css\">");
-        writeln!(dest, "  <title></title>");
+        writeln!(dest, "  <title>{}</title>", self.title);
         writeln!(dest, "</head>");
         writeln!(dest, "<body>");
         
@@ -323,18 +340,17 @@ impl Convertor {
         writeln!(dest, "    <nav id=\"sidebar\">");
         writeln!(dest, "    </nav>");
 
-        writeln!(dest, "    <div id=\"content\">");
+        
         
         self.gen_content(dest);
 
-        writeln!(dest, "    <div>");
-
         writeln!(dest, "</body>");
-        writeln!(dest, "</html>");
+        write!(dest, "</html>");
     }
 
     fn gen_content(&self, dest: &mut File) {
-        for block in &self.elem_list {
+        writeln!(dest, "    <div id=\"content\">");
+        for block in &self.content {
             match block {
                 Header { spans, level } => { self.gen_header(spans, level, dest); },
                 Blockquote { spans } => { self.gen_blockquote(spans, dest); },
@@ -344,6 +360,7 @@ impl Convertor {
                 _ => {},
             }
         }
+        writeln!(dest, "    <div>");
     }
 
     fn gen_header(&self, spans: &Vec<Span>, level: &u32, dest: &mut File) {
