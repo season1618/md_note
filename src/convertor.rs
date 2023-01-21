@@ -5,7 +5,7 @@ use Block::*;
 use Span::*;
 use EmphasisKind::*;
 
-#[derive(Clone)]
+#[derive(Debug)]
 enum Block {
     Header { spans: Vec<Span>, level: u32 },
     LineBreak,
@@ -15,7 +15,7 @@ enum Block {
     Paragraph { spans: Vec<Span> },
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
 enum Span {
     Link { title: String, url: String },
     Emphasis { kind: EmphasisKind, text: String },
@@ -24,13 +24,13 @@ enum Span {
     Text { text: String },
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
 struct ListItem {
     spans: Vec<Span>,
     list: Block,
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
 enum EmphasisKind {
     Em,
     Strong,
@@ -109,7 +109,7 @@ impl Convertor {
     }
 
     fn parse_list(&mut self, indent: i32) -> Block {
-        let mut items: Vec<ListItem> = Vec::new();
+        let mut items = Vec::new();
         while self.pos < self.doc.len() {
             let mut num = 0;
             while self.pos + num < self.doc.len() {
@@ -143,8 +143,7 @@ impl Convertor {
     fn parse_code_block(&mut self) -> Block {
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
-            if c == '\n' || c == '\r' {
-                self.pos += 1;
+            if self.expect("\n") || self.expect("\r\n") {
                 break;
             }
             self.pos += 1;
@@ -170,8 +169,7 @@ impl Convertor {
         let mut spans = Vec::new();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
-            if c == '\n' || c == '\r' {
-                self.pos += 1;
+            if self.expect("\n") || self.expect("\r\n") { // ends at new line
                 break;
             }
 
@@ -214,25 +212,26 @@ impl Convertor {
     fn parse_link(&mut self) -> Span {
         self.consume("[");
 
-        let title = "".to_string();
+        let mut title = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
             self.pos += 1;
             if c == ']' {
                 break;
             }
+            title.push(c);
         }
         
         if self.expect("(") {
-            let url = "".to_string();
+            let mut url = "".to_string();
             while self.pos < self.doc.len() {
                 let c = self.doc[self.pos];
                 self.pos += 1;
                 if c == ')' {
                     break;
                 }
+                url.push(c);
             }
-
             Link { title, url }
         } else { // exception
             Text { text: title }
@@ -243,8 +242,7 @@ impl Convertor {
         let mut text = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
-            if c == '\n' || c == '\r' {
-                self.pos += 1;
+            if self.expect("\n") || self.expect("\r\n") {
                 return Text { text: format!("{}{}", ind.to_string(), text) };
             }
             if self.expect(ind) {
@@ -278,7 +276,6 @@ impl Convertor {
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
             if c == '\n' || c == '\r' {
-                self.pos += 1;
                 break;
             }
             if c == '[' || c == '`' || c == '*' || c == '_' {
