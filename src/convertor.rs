@@ -7,7 +7,7 @@ use EmphasisKind::*;
 
 #[derive(Debug)]
 enum Block {
-    Header { spans: Vec<Span>, level: u32 },
+    Header { spans: Vec<Span>, level: u32, id: String },
     Blockquote { spans: Vec<Span> },
     List { items: Vec<ListItem> },
     CodeBlock { code: String },
@@ -114,18 +114,29 @@ impl Convertor {
 
     fn parse_header(&mut self, level: u32) -> Block {
         let spans = self.parse_spans();
-        if level == 1 {
-            self.title = "".to_string();
-            for span in &spans {
-                match span {
-                    Link { title: t, .. } => { self.title.push_str(t); },
-                    Emphasis { text, .. } => { self.title.push_str(text); },
-                    Code { code } => { self.title.push_str(code); },
-                    Text { text } => { self.title.push_str(text); },
-                    _ => {},
-                }
+        let mut id = "".to_string();
+        for span in &spans {
+            match span {
+                Link { title, .. } => { id.push_str(title); },
+                Emphasis { text, .. } => { id.push_str(text); },
+                Code { code } => { id.push_str(code); },
+                Text { text } => { id.push_str(text); },
+                _ => {},
             }
-        } else {
+        }
+        if level == 1 {
+            self.title = id.clone();
+        } else if level == 2 {
+            let url = format!("#{}", id);
+            match &mut self.sidebar {
+                List { items } => {
+                    items.push(ListItem {
+                        spans: vec![ Link { title: id.clone(), url }],
+                        list: List { items: Vec::new() },
+                    });
+                },
+                _ => {},
+            }
             // let mut cur = &mut self.sidebar;
             // for i in 2..level {
             //     match cur {
@@ -147,20 +158,8 @@ impl Convertor {
             //     _ => {},
             // }
             // Convertor::make_toc(&mut self.sidebar, &spans.clone(), level);
-            
         }
-        if level == 2 {
-            match &mut self.sidebar {
-                List { items } => {
-                    items.push(ListItem {
-                        spans: spans.clone(),
-                        list: List { items: Vec::new() },
-                    });
-                },
-                _ => {},
-            }
-        }
-        Header { spans, level }
+        Header { spans, level, id }
     }
 
     // fn make_toc(cur_list: &mut Block, spans: &Vec<Span>, level: u32) {
@@ -438,7 +437,7 @@ impl Convertor {
         writeln!(dest, "    <div id=\"content\">");
         for block in &self.content {
             match block {
-                Header { spans, level } => { self.gen_header(spans, level, dest); },
+                Header { spans, level, id } => { self.gen_header(spans, level, id, dest); },
                 Blockquote { spans } => { self.gen_blockquote(spans, dest); },
                 List { items } => { self.gen_list(items, 0, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
@@ -449,8 +448,8 @@ impl Convertor {
         writeln!(dest, "    <div>");
     }
 
-    fn gen_header(&self, spans: &Vec<Span>, level: &u32, dest: &mut File) {
-        write!(dest, "      <h{}>", *level);
+    fn gen_header(&self, spans: &Vec<Span>, level: &u32, id: &String, dest: &mut File) {
+        write!(dest, "      <h{} id=\"{}\">", *level, *id);
         self.gen_spans(spans, dest);
         writeln!(dest, "</h{}>", *level);
     }
