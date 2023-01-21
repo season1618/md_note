@@ -15,7 +15,7 @@ enum Block {
     Paragraph { spans: Vec<Span> },
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum Span {
     Link { title: String, url: String },
     Emphasis { kind: EmphasisKind, text: String },
@@ -30,7 +30,7 @@ struct ListItem {
     list: Block,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum EmphasisKind {
     Em,
     Strong,
@@ -117,9 +117,62 @@ impl Convertor {
                     _ => {},
                 }
             }
+        } else {
+            // let mut cur = &mut self.sidebar;
+            // for i in 2..level {
+            //     match cur {
+            //         List { items } => {
+            //             match items[items.len()-1] {
+            //                 ListItem { spans, list } => { cur = list; },
+            //             }
+            //         },
+            //         _ => {},
+            //     }
+            // }
+            // match cur {
+            //     List { mut items } => {
+            //         items.push(ListItem {
+            //             spans: spans.clone(),
+            //             list: List { items: Vec::new() },
+            //         });
+            //     },
+            //     _ => {},
+            // }
+            // Convertor::make_toc(&mut self.sidebar, &spans.clone(), level);
+            
+        }
+        if level == 2 {
+            match &mut self.sidebar {
+                List { items } => {
+                    items.push(ListItem {
+                        spans: spans.clone(),
+                        list: List { items: Vec::new() },
+                    });
+                },
+                _ => {},
+            }
         }
         Header { spans, level }
     }
+
+    // fn make_toc(cur_list: &mut Block, spans: &Vec<Span>, level: u32) {
+    //     match cur_list {
+    //         List { items } => {
+    //             if level == 2 {
+    //                 items.push(ListItem {
+    //                     spans: spans.clone(),
+    //                     list: List { items: Vec::new() }
+    //                 });
+    //             } else {
+    //                 match items[items.len()-1] {
+    //                     ListItem { ref mut list, .. } => { Convertor::make_toc(list, spans, level - 1); },
+    //                 }
+                    
+    //             }
+    //         },
+    //         _ => {},
+    //     }
+    // }
 
     fn parse_blockquote(&mut self) -> Block {
         Blockquote { spans: self.parse_spans() }
@@ -337,15 +390,20 @@ impl Convertor {
         
         writeln!(dest, "  <div id=\"wrapper\">");
 
-        writeln!(dest, "    <nav id=\"sidebar\">");
-        writeln!(dest, "    </nav>");
-
-        
-        
+        self.gen_sidebar(dest);
         self.gen_content(dest);
 
         writeln!(dest, "</body>");
         write!(dest, "</html>");
+    }
+
+    fn gen_sidebar(&self, dest: &mut File) {
+        writeln!(dest, "    <nav id=\"sidebar\">");
+        match &self.sidebar {
+            List { items } => { self.gen_list(items, 0, dest); },
+            _ => {},
+        }
+        writeln!(dest, "    </nav>");
     }
 
     fn gen_content(&self, dest: &mut File) {
