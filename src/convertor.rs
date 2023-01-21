@@ -168,25 +168,6 @@ impl Convertor {
         Header { spans, level, id }
     }
 
-    // fn make_toc(cur_list: &mut Block, spans: &Vec<Span>, level: u32) {
-    //     match cur_list {
-    //         List { items } => {
-    //             if level == 2 {
-    //                 items.push(ListItem {
-    //                     spans: spans.clone(),
-    //                     list: List { items: Vec::new() }
-    //                 });
-    //             } else {
-    //                 match items[items.len()-1] {
-    //                     ListItem { ref mut list, .. } => { Convertor::make_toc(list, spans, level - 1); },
-    //                 }
-                    
-    //             }
-    //         },
-    //         _ => {},
-    //     }
-    // }
-
     fn parse_blockquote(&mut self) -> Block {
         Blockquote { spans: self.parse_spans() }
     }
@@ -289,7 +270,6 @@ impl Convertor {
 
     fn parse_code_block(&mut self) -> Block {
         while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
             if self.expect("\n") || self.expect("\r\n") {
                 break;
             }
@@ -306,10 +286,6 @@ impl Convertor {
         }
 
         CodeBlock { code }
-    }
-
-    fn parse_paragraph(&mut self) -> Block {
-        Paragraph { spans: self.parse_spans() }
     }
 
     fn parse_spans(&mut self) -> Vec<Span> {
@@ -476,35 +452,35 @@ impl Convertor {
     }
 
     pub fn gen_html(&self, dest: &mut File) {
-        writeln!(dest, "<!DOCTYPE html>");
-        writeln!(dest, "<html>");
-        writeln!(dest, "<head>");
-        writeln!(dest, "  <meta charset=\"utf-8\">");
-        writeln!(dest, "  <link rel=\"stylesheet\" href=\"./index.css\">");
-        writeln!(dest, "  <title>{}</title>", self.title);
-        writeln!(dest, "</head>");
-        writeln!(dest, "<body>");
+        writeln!(dest, "<!DOCTYPE html>").unwrap();
+        writeln!(dest, "<html>").unwrap();
+        writeln!(dest, "<head>").unwrap();
+        writeln!(dest, "  <meta charset=\"utf-8\">").unwrap();
+        writeln!(dest, "  <link rel=\"stylesheet\" href=\"./index.css\">").unwrap();
+        writeln!(dest, "  <title>{}</title>", self.title).unwrap();
+        writeln!(dest, "</head>").unwrap();
+        writeln!(dest, "<body>").unwrap();
         
-        writeln!(dest, "  <div id=\"wrapper\">");
+        writeln!(dest, "  <div id=\"wrapper\">").unwrap();
 
         self.gen_sidebar(dest);
         self.gen_content(dest);
 
-        writeln!(dest, "</body>");
-        write!(dest, "</html>");
+        writeln!(dest, "</body>").unwrap();
+        write!(dest, "</html>").unwrap();
     }
 
     fn gen_sidebar(&self, dest: &mut File) {
-        writeln!(dest, "    <nav id=\"sidebar\">");
+        writeln!(dest, "    <nav id=\"sidebar\">").unwrap();
         match &self.sidebar {
             List { items } => { self.gen_list(items, 0, dest); },
             _ => {},
         }
-        writeln!(dest, "    </nav>");
+        writeln!(dest, "    </nav>").unwrap();
     }
 
     fn gen_content(&self, dest: &mut File) {
-        writeln!(dest, "    <div id=\"content\">");
+        writeln!(dest, "    <div id=\"content\">").unwrap();
         for block in &self.content {
             match block {
                 Header { spans, level, id } => { self.gen_header(spans, level, id, dest); },
@@ -516,32 +492,32 @@ impl Convertor {
                 _ => {},
             }
         }
-        writeln!(dest, "    <div>");
+        writeln!(dest, "    <div>").unwrap();
     }
 
     fn gen_header(&self, spans: &Vec<Span>, level: &u32, id: &String, dest: &mut File) {
-        write!(dest, "      <h{} id=\"{}\">", *level, *id);
+        write!(dest, "      <h{} id=\"{}\">", *level, *id).unwrap();
         self.gen_spans(spans, dest);
-        writeln!(dest, "</h{}>", *level);
+        writeln!(dest, "</h{}>", *level).unwrap();
     }
 
     fn gen_blockquote(&self, spans: &Vec<Span>, dest: &mut File) {
-        write!(dest, "      <blockquote>");
+        write!(dest, "      <blockquote>").unwrap();
         self.gen_spans(spans, dest);
-        writeln!(dest, "</blockquote>");
+        writeln!(dest, "</blockquote>").unwrap();
     }
 
     fn gen_list(&self, items: &Vec<ListItem>, indent: u32, dest: &mut File) {
-        for i in 0..(3 + indent) { write!(dest, "  "); }
-        writeln!(dest, "<ul>");
+        for _i in 0..(3 + indent) { write!(dest, "  ").unwrap(); }
+        writeln!(dest, "<ul>").unwrap();
         for item in items {
-            for i in 0..(4 + indent) { write!(dest, "  "); }
-            writeln!(dest, "<li>");
+            for _i in 0..(4 + indent) { write!(dest, "  ").unwrap(); }
+            writeln!(dest, "<li>").unwrap();
             match item {
                 ListItem { spans, list } => {
-                    for i in 0..(5 + indent) { write!(dest, "  "); }
+                    for _i in 0..(5 + indent) { write!(dest, "  ").unwrap(); }
                     self.gen_spans(spans, dest);
-                    writeln!(dest);
+                    writeln!(dest).unwrap();
                     match list {
                         List { items: nested_items } => {
                             if !nested_items.is_empty() { self.gen_list(nested_items, indent + 2, dest); }
@@ -550,49 +526,49 @@ impl Convertor {
                     }
                 }
             }
-            for i in 0..(4 + indent) { write!(dest, "  "); }
-            writeln!(dest, "</li>");
+            for _i in 0..(4 + indent) { write!(dest, "  ").unwrap(); }
+            writeln!(dest, "</li>").unwrap();
         }
-        for i in 0..(3 + indent) { write!(dest, "  "); }
-        writeln!(dest, "</ul>");
+        for _i in 0..(3 + indent) { write!(dest, "  ").unwrap(); }
+        writeln!(dest, "</ul>").unwrap();
     }
 
     fn gen_table(&self, head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, dest: &mut File) {
-        writeln!(dest, "      <table>");
+        writeln!(dest, "      <table>").unwrap();
 
-        writeln!(dest, "        <thead>");
+        writeln!(dest, "        <thead>").unwrap();
         for row in head {
-            writeln!(dest, "          <tr>");
+            writeln!(dest, "          <tr>").unwrap();
             for data in row {
-                writeln!(dest, "            <td>{}</td>", *data);
+                writeln!(dest, "            <td>{}</td>", *data).unwrap();
             }
-            writeln!(dest, "          </tr>");
+            writeln!(dest, "          </tr>").unwrap();
         }
-        writeln!(dest, "        </thead>");
+        writeln!(dest, "        </thead>").unwrap();
         
-        writeln!(dest, "        <tbody>");
+        writeln!(dest, "        <tbody>").unwrap();
         for row in body {
-            writeln!(dest, "          <tr>");
+            writeln!(dest, "          <tr>").unwrap();
             for data in row {
-                writeln!(dest, "            <td>{}</td>", *data);
+                writeln!(dest, "            <td>{}</td>", *data).unwrap();
             }
-            writeln!(dest, "          </tr>");
+            writeln!(dest, "          </tr>").unwrap();
         }
-        writeln!(dest, "        </tbody>");
+        writeln!(dest, "        </tbody>").unwrap();
         
-        writeln!(dest, "      </table>");
+        writeln!(dest, "      </table>").unwrap();
     }
 
     fn gen_code_block(&self, code: &String, dest: &mut File) {
-        write!(dest, "      <pre>");
-        write!(dest, "{}", code);
-        writeln!(dest, "</pre>");
+        write!(dest, "      <pre>").unwrap();
+        write!(dest, "{}", code).unwrap();
+        writeln!(dest, "</pre>").unwrap();
     }
 
     fn gen_paragraph(&self, spans: &Vec<Span>, dest: &mut File) {
-        write!(dest, "      <p>");
+        write!(dest, "      <p>").unwrap();
         self.gen_spans(spans, dest);
-        writeln!(dest, "</p>");
+        writeln!(dest, "</p>").unwrap();
     }
 
     fn gen_spans(&self, spans: &Vec<Span>, dest: &mut File) {
@@ -603,31 +579,30 @@ impl Convertor {
                 Code { code } => { self.gen_code(code, dest); },
                 Image { url } => { self.gen_image(url, dest); },
                 Text { text } => { self.gen_text(text, dest); },
-                _ => {},
             }
         }
     }
 
     fn gen_link(&self, title: &String, url: &String, dest: &mut File) {
-        write!(dest, "<a href=\"{}\">{}</a>", *url, *title);
+        write!(dest, "<a href=\"{}\">{}</a>", *url, *title).unwrap();
     }
 
     fn gen_emphasis(&self, kind: &EmphasisKind, text: &String, dest: &mut File) {
         match *kind {
-            Em => { write!(dest, "<em>{}</em>", *text); },
-            Strong => { write!(dest, "<strong>{}</strong>", *text); },
+            Em => { write!(dest, "<em>{}</em>", *text).unwrap(); },
+            Strong => { write!(dest, "<strong>{}</strong>", *text).unwrap(); },
         }
     }
 
     fn gen_code(&self, code: &String, dest: &mut File) {
-        write!(dest, "<code>{}</code>", *code);
+        write!(dest, "<code>{}</code>", *code).unwrap();
     }
 
     fn gen_image(&self, url: &String, dest: &mut File) {
-        write!(dest, "<img src=\"{}\">", *url);
+        write!(dest, "<img src=\"{}\">", *url).unwrap();
     }
 
     fn gen_text(&self, text: &String, dest: &mut File) {
-        write!(dest, "{}", text);
+        write!(dest, "{}", text).unwrap();
     }
 }
