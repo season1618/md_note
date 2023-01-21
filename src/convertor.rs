@@ -8,11 +8,11 @@ use EmphasisKind::*;
 #[derive(Debug)]
 enum Block {
     Header { spans: Vec<Span>, level: u32 },
-    LineBreak,
     Blockquote { spans: Vec<Span> },
     List { items: Vec<ListItem> },
     CodeBlock { code: String },
     Paragraph { spans: Vec<Span> },
+    LineBreak,
 }
 
 #[derive(Clone, Debug)]
@@ -58,7 +58,10 @@ impl Convertor {
     pub fn parse_markdown(&mut self) {
         while self.pos < self.doc.len() {
             let block = self.parse_block();
-            self.content.push(block);
+            match block {
+                LineBreak => {},
+                _ => { self.content.push(block); },
+            }
         }
     }
 
@@ -100,8 +103,13 @@ impl Convertor {
             return self.parse_code_block();
         }
 
-        // paragraph
-        self.parse_paragraph()
+        // paragraph, line break
+        let spans = self.parse_spans();
+        if !spans.is_empty() {
+            return Paragraph { spans };
+        } else {
+            return LineBreak;
+        }
     }
 
     fn parse_header(&mut self, level: u32) -> Block {
