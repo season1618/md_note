@@ -11,6 +11,7 @@ enum Block {
     Blockquote { spans: Vec<Span> },
     List { items: Vec<ListItem> },
     CodeBlock { code: String },
+    Table { head: Vec<Vec<String>>, body: Vec<Vec<String>> },
     Paragraph { spans: Vec<Span> },
     LineBreak,
 }
@@ -96,6 +97,11 @@ impl Convertor {
         // list
         if c == '*' || c == '+' || c == '-' {
             return self.parse_list(-1);
+        }
+
+        // table
+        if c == '|' {
+            return self.parse_table();
         }
 
         // code block
@@ -215,6 +221,70 @@ impl Convertor {
             }
         }
         List { items }
+    }
+
+    fn parse_table(&mut self) -> Block {
+        let mut head = Vec::new();
+        let mut body = Vec::new();
+        loop {
+            let mut row = Vec::new();
+            let mut data = "".to_string();
+            let mut is_row = false;
+            if !self.expect("|") {
+                break;
+            }
+            while self.pos < self.doc.len() {
+                if self.expect("\n") || self.expect("\r\n") {
+                    break;
+                }
+                if self.expect("|") {
+                    row.push(data);
+                    data = "".to_string();
+                } else {
+                    if self.doc[self.pos] != ' ' && self.doc[self.pos] != '-' {
+                        is_row = true;
+                    }
+                    data.push(self.doc[self.pos]);
+                    self.pos += 1;
+                }
+            }
+            if is_row {
+                head.push(row);
+            } else {
+                break;
+            }
+        }
+
+        loop {
+            let mut row = Vec::new();
+            let mut data = "".to_string();
+            let mut is_row = false;
+            if !self.expect("|") {
+                break;
+            }
+            while self.pos < self.doc.len() {
+                if self.expect("\n") || self.expect("\r\n") {
+                    break;
+                }
+                if self.expect("|") {
+                    row.push(data);
+                    data = "".to_string();
+                } else {
+                    if self.doc[self.pos] != ' ' && self.doc[self.pos] != '-' {
+                        is_row = true;
+                    }
+                    data.push(self.doc[self.pos]);
+                    self.pos += 1;
+                }
+            }
+            if is_row {
+                body.push(row);
+            } else {
+                break;
+            }
+        }
+
+        Table { head, body }
     }
 
     fn parse_code_block(&mut self) -> Block {
@@ -440,6 +510,7 @@ impl Convertor {
                 Header { spans, level, id } => { self.gen_header(spans, level, id, dest); },
                 Blockquote { spans } => { self.gen_blockquote(spans, dest); },
                 List { items } => { self.gen_list(items, 0, dest); },
+                Table { head, body } => { self.gen_table(head, body, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
                 CodeBlock { code } => { self.gen_code_block(code, dest); },
                 _ => {},
@@ -484,6 +555,32 @@ impl Convertor {
         }
         for i in 0..(3 + indent) { write!(dest, "  "); }
         writeln!(dest, "</ul>");
+    }
+
+    fn gen_table(&self, head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, dest: &mut File) {
+        writeln!(dest, "      <table>");
+
+        writeln!(dest, "        <thead>");
+        for row in head {
+            writeln!(dest, "          <tr>");
+            for data in row {
+                writeln!(dest, "            <td>{}</td>", *data);
+            }
+            writeln!(dest, "          </tr>");
+        }
+        writeln!(dest, "        </thead>");
+        
+        writeln!(dest, "        <tbody>");
+        for row in body {
+            writeln!(dest, "          <tr>");
+            for data in row {
+                writeln!(dest, "            <td>{}</td>", *data);
+            }
+            writeln!(dest, "          </tr>");
+        }
+        writeln!(dest, "        </tbody>");
+        
+        writeln!(dest, "      </table>");
     }
 
     fn gen_code_block(&self, code: &String, dest: &mut File) {
