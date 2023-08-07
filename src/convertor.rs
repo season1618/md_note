@@ -135,6 +135,8 @@ impl Convertor {
                 _ => {},
             }
         }
+
+        // modify title or table of contents
         if level == 1 {
             self.title = id.clone();
         } else {
@@ -148,38 +150,6 @@ impl Convertor {
                 spans: vec![ Link { title: id.clone(), url }],
                 list: List { items: Vec::new() },
             });
-            
-            // match &mut self.sidebar {
-            //     List { items } => {
-            //         items.push(ListItem {
-            //             spans: vec![ Link { title: id.clone(), url }],
-            //             list: List { items: Vec::new() },
-            //         });
-            //     },
-            //     _ => {},
-            // }
-
-            // let mut cur = &mut self.sidebar;
-            // for i in 2..level {
-            //     match cur {
-            //         List { items } => {
-            //             match items[items.len()-1] {
-            //                 ListItem { spans, list } => { cur = list; },
-            //             }
-            //         },
-            //         _ => {},
-            //     }
-            // }
-            // match cur {
-            //     List { mut items } => {
-            //         items.push(ListItem {
-            //             spans: spans.clone(),
-            //             list: List { items: Vec::new() },
-            //         });
-            //     },
-            //     _ => {},
-            // }
-            // Convertor::make_toc(&mut self.sidebar, &spans.clone(), level);
         }
         Header { spans, level, id }
     }
