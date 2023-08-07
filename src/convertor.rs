@@ -9,7 +9,7 @@ use EmphasisKind::*;
 enum Block {
     Header { spans: Vec<Span>, level: u32, id: String },
     Blockquote { spans: Vec<Span> },
-    List { items: Vec<ListItem> },
+    ListElement(List),
     CodeBlock { code: String },
     Table { head: Vec<Vec<String>>, body: Vec<Vec<String>> },
     Paragraph { spans: Vec<Span> },
@@ -26,9 +26,14 @@ enum Span {
 }
 
 #[derive(Debug)]
+struct List {
+    items: Vec<ListItem>,
+}
+
+#[derive(Debug)]
 struct ListItem {
     spans: Vec<Span>,
-    list: Block,
+    list: List,
 }
 
 #[derive(Clone, Debug)]
@@ -41,7 +46,7 @@ pub struct Convertor {
     doc: Vec<char>,
     pos: usize,
     title: String,
-    sidebar: Block,
+    toc: List,
     content: Vec<Block>,
 }
 
@@ -51,7 +56,7 @@ impl Convertor {
             doc: doc.chars().collect(),
             pos: 0,
             title: "".to_string(),
-            sidebar: List { items: Vec::new() },
+            toc: List { items: Vec::new() },
             content: Vec::new(),
         }
     }
@@ -96,7 +101,7 @@ impl Convertor {
 
         // list
         if c == '*' || c == '+' || c == '-' {
-            return self.parse_list(-1);
+            return ListElement(self.parse_list(-1));
         }
 
         // table
@@ -132,17 +137,28 @@ impl Convertor {
         }
         if level == 1 {
             self.title = id.clone();
-        } else if level == 2 {
+        } else {
             let url = format!("#{}", id);
-            match &mut self.sidebar {
-                List { items } => {
-                    items.push(ListItem {
-                        spans: vec![ Link { title: id.clone(), url }],
-                        list: List { items: Vec::new() },
-                    });
-                },
-                _ => {},
+
+            let mut cur = &mut self.toc;
+            for _ in 2..level {
+                cur = &mut cur.items.last_mut().unwrap().list;
             }
+            cur.items.push(ListItem {
+                spans: vec![ Link { title: id.clone(), url }],
+                list: List { items: Vec::new() },
+            });
+            
+            // match &mut self.sidebar {
+            //     List { items } => {
+            //         items.push(ListItem {
+            //             spans: vec![ Link { title: id.clone(), url }],
+            //             list: List { items: Vec::new() },
+            //         });
+            //     },
+            //     _ => {},
+            // }
+
             // let mut cur = &mut self.sidebar;
             // for i in 2..level {
             //     match cur {
@@ -172,7 +188,7 @@ impl Convertor {
         Blockquote { spans: self.parse_spans() }
     }
 
-    fn parse_list(&mut self, indent: i32) -> Block {
+    fn parse_list(&mut self, indent: i32) -> List {
         let mut items = Vec::new();
         while self.pos < self.doc.len() {
             let mut num = 0;
@@ -472,10 +488,7 @@ impl Convertor {
 
     fn gen_sidebar(&self, dest: &mut File) {
         writeln!(dest, "    <nav id=\"sidebar\">").unwrap();
-        match &self.sidebar {
-            List { items } => { self.gen_list(items, 0, dest); },
-            _ => {},
-        }
+        self.gen_ordered_list(&self.toc, 0, dest);
         writeln!(dest, "    </nav>").unwrap();
     }
 
@@ -485,7 +498,7 @@ impl Convertor {
             match block {
                 Header { spans, level, id } => { self.gen_header(spans, level, id, dest); },
                 Blockquote { spans } => { self.gen_blockquote(spans, dest); },
-                List { items } => { self.gen_list(items, 0, dest); },
+                ListElement(list) => { self.gen_unordered_list(list, 0, dest); },
                 Table { head, body } => { self.gen_table(head, body, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
                 CodeBlock { code } => { self.gen_code_block(code, dest); },
@@ -507,30 +520,50 @@ impl Convertor {
         writeln!(dest, "</blockquote>").unwrap();
     }
 
-    fn gen_list(&self, items: &Vec<ListItem>, indent: u32, dest: &mut File) {
-        for _i in 0..(3 + indent) { write!(dest, "  ").unwrap(); }
+    fn gen_unordered_list(&self, list: &List, indent: u32, dest: &mut File) {
+        if list.items.is_empty() {
+            return;
+        }
+
+        for _ in 0..(3 + indent) { write!(dest, "  ").unwrap(); }
         writeln!(dest, "<ul>").unwrap();
-        for item in items {
-            for _i in 0..(4 + indent) { write!(dest, "  ").unwrap(); }
+        for item in &list.items {
+            for _ in 0..(4 + indent) { write!(dest, "  ").unwrap(); }
             writeln!(dest, "<li>").unwrap();
-            match item {
-                ListItem { spans, list } => {
-                    for _i in 0..(5 + indent) { write!(dest, "  ").unwrap(); }
-                    self.gen_spans(spans, dest);
-                    writeln!(dest).unwrap();
-                    match list {
-                        List { items: nested_items } => {
-                            if !nested_items.is_empty() { self.gen_list(nested_items, indent + 2, dest); }
-                        },
-                        _ => {},
-                    }
-                }
-            }
-            for _i in 0..(4 + indent) { write!(dest, "  ").unwrap(); }
+            
+            for _ in 0..(5 + indent) { write!(dest, "  ").unwrap(); }
+            self.gen_spans(&item.spans, dest);
+            writeln!(dest).unwrap();
+            self.gen_unordered_list(&item.list, indent + 2, dest);
+            
+            for _ in 0..(4 + indent) { write!(dest, "  ").unwrap(); }
             writeln!(dest, "</li>").unwrap();
         }
-        for _i in 0..(3 + indent) { write!(dest, "  ").unwrap(); }
+        for _ in 0..(3 + indent) { write!(dest, "  ").unwrap(); }
         writeln!(dest, "</ul>").unwrap();
+    }
+
+    fn gen_ordered_list(&self, list: &List, indent: u32, dest: &mut File) {
+        if list.items.is_empty() {
+            return;
+        }
+
+        for _ in 0..(3 + indent) { write!(dest, "  ").unwrap(); }
+        writeln!(dest, "<ol>").unwrap();
+        for item in &list.items {
+            for _ in 0..(4 + indent) { write!(dest, "  ").unwrap(); }
+            writeln!(dest, "<li>").unwrap();
+            
+            for _ in 0..(5 + indent) { write!(dest, "  ").unwrap(); }
+            self.gen_spans(&item.spans, dest);
+            writeln!(dest).unwrap();
+            self.gen_ordered_list(&item.list, indent + 2, dest);
+            
+            for _ in 0..(4 + indent) { write!(dest, "  ").unwrap(); }
+            writeln!(dest, "</li>").unwrap();
+        }
+        for _ in 0..(3 + indent) { write!(dest, "  ").unwrap(); }
+        writeln!(dest, "</ol>").unwrap();
     }
 
     fn gen_table(&self, head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, dest: &mut File) {
