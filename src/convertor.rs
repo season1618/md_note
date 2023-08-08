@@ -27,6 +27,7 @@ enum Span {
 
 #[derive(Debug)]
 struct List {
+    ordered: bool,
     items: Vec<ListItem>,
 }
 
@@ -56,7 +57,7 @@ impl Convertor {
             doc: doc.chars().collect(),
             pos: 0,
             title: "".to_string(),
-            toc: List { items: Vec::new() },
+            toc: List { ordered: true, items: Vec::new() },
             content: Vec::new(),
         }
     }
@@ -100,7 +101,7 @@ impl Convertor {
         }
 
         // list
-        if c == '*' || c == '+' || c == '-' {
+        if c == '*' || c == '+' || c == '-' || self.match_numbers_period_space() {
             return ListElement(self.parse_list(0));
         }
 
@@ -148,7 +149,7 @@ impl Convertor {
             }
             cur.items.push(ListItem {
                 spans: vec![ Link { title: id.clone(), url }],
-                list: List { items: Vec::new() },
+                list: List { ordered: true, items: Vec::new() },
             });
         }
         Header { spans, level, id }
@@ -159,6 +160,7 @@ impl Convertor {
     }
 
     fn parse_list(&mut self, min_indent: usize) -> List {
+        let mut ordered = false;
         let mut items = Vec::new();
         while self.pos < self.doc.len() {
             let mut indent = 0;
@@ -166,19 +168,33 @@ impl Convertor {
                 indent += 1;
             }
 
-            let c1 = self.doc[self.pos + indent];
-            let c2 = self.doc[self.pos + indent + 1];
-            if min_indent <= indent && (c1 == '*' || c1 == '+' || c1 == '-') && c2 == ' ' {
-                self.pos += indent + 2;
-                items.push(ListItem {
-                    spans: self.parse_spans(),
-                    list: self.parse_list(indent + 1),
-                });
-            } else {
-                break;
+            if min_indent <= indent {
+                self.pos += indent;
+
+                let c1 = self.doc[self.pos];
+                let c2 = self.doc[self.pos + 1];
+                if (c1 == '*' || c1 == '+' || c1 == '-') && c2 == ' ' {
+                    self.pos += 2;
+                    ordered = false;
+                    items.push(ListItem {
+                        spans: self.parse_spans(),
+                        list: self.parse_list(indent + 1),
+                    });
+                    continue;
+                }
+
+                if self.expect_numbers_period_space() {
+                    ordered = true;
+                    items.push(ListItem {
+                        spans: self.parse_spans(),
+                        list: self.parse_list(indent + 1),
+                    });
+                    continue;
+                }
             }
+            break;
         }
-        List { items }
+        List { ordered, items }
     }
 
     fn parse_table(&mut self) -> Block {
@@ -407,6 +423,31 @@ impl Convertor {
         Text { text }
     }
 
+    fn match_numbers_period_space(&mut self) -> bool {
+        let mut i = 0;
+        while self.pos + i < self.doc.len() && self.doc[self.pos + i].is_ascii_digit() {
+            i += 1;
+        }
+        if i > 0 && self.doc[self.pos + i] == '.' && self.doc[self.pos + i + 1] == ' ' {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    fn expect_numbers_period_space(&mut self) -> bool {
+        let mut i = 0;
+        while self.pos + i < self.doc.len() && self.doc[self.pos + i].is_ascii_digit() {
+            i += 1;
+        }
+        if i > 0 && self.doc[self.pos + i] == '.' && self.doc[self.pos + i + 1] == ' ' {
+            self.pos += i + 2;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     fn expect(&mut self, s: &str) -> bool {
         let cs: Vec<char> = s.chars().collect();
         for i in 0..s.len() {
@@ -449,7 +490,7 @@ impl Convertor {
 
     fn gen_sidebar(&self, dest: &mut File) {
         writeln!(dest, "    <nav id=\"sidebar\">").unwrap();
-        self.gen_ordered_list(&self.toc, 6, dest);
+        self.gen_list(&self.toc, 6, dest);
         writeln!(dest, "    </nav>").unwrap();
     }
 
@@ -459,7 +500,7 @@ impl Convertor {
             match block {
                 Header { spans, level, id } => { self.gen_header(spans, level, id, dest); },
                 Blockquote { spans } => { self.gen_blockquote(spans, dest); },
-                ListElement(list) => { self.gen_unordered_list(list, 6, dest); },
+                ListElement(list) => { self.gen_list(list, 6, dest); },
                 Table { head, body } => { self.gen_table(head, body, dest); },
                 Paragraph { spans } => { self.gen_paragraph(spans, dest); },
                 CodeBlock { code } => { self.gen_code_block(code, dest); },
@@ -481,42 +522,23 @@ impl Convertor {
         writeln!(dest, "</blockquote>").unwrap();
     }
 
-    fn gen_unordered_list(&self, list: &List, indent: usize, dest: &mut File) {
+    fn gen_list(&self, list: &List, indent: usize, dest: &mut File) {
         if list.items.is_empty() {
             return;
         }
 
-        writeln!(dest, "{}<ul>", " ".repeat(indent)).unwrap();
+        writeln!(dest, "{}<{}>", " ".repeat(indent), if list.ordered { "ol" } else { "ul" }).unwrap();
         for item in &list.items {
             writeln!(dest, "{}<li>", " ".repeat(indent + 2)).unwrap();
             
             write!(dest, "{}", " ".repeat(indent + 4)).unwrap();
             self.gen_spans(&item.spans, dest);
             writeln!(dest).unwrap();
-            self.gen_unordered_list(&item.list, indent + 4, dest);
+            self.gen_list(&item.list, indent + 4, dest);
             
             writeln!(dest, "{}</li>", " ".repeat(indent + 2)).unwrap();
         }
-        writeln!(dest, "{}</ul>", " ".repeat(indent)).unwrap();
-    }
-
-    fn gen_ordered_list(&self, list: &List, indent: usize, dest: &mut File) {
-        if list.items.is_empty() {
-            return;
-        }
-
-        writeln!(dest, "{}<ol>", " ".repeat(indent)).unwrap();
-        for item in &list.items {
-            writeln!(dest, "{}<li>", " ".repeat(indent + 2)).unwrap();
-            
-            write!(dest, "{}", " ".repeat(indent + 4)).unwrap();
-            self.gen_spans(&item.spans, dest);
-            writeln!(dest).unwrap();
-            self.gen_ordered_list(&item.list, indent + 4, dest);
-            
-            writeln!(dest, "{}</li>", " ".repeat(indent + 2)).unwrap();
-        }
-        writeln!(dest, "{}</ol>", " ".repeat(indent)).unwrap();
+        writeln!(dest, "{}</{}>", " ".repeat(indent), if list.ordered { "ol" } else { "ul" }).unwrap();
     }
 
     fn gen_table(&self, head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, dest: &mut File) {
