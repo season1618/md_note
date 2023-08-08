@@ -337,22 +337,28 @@ impl Convertor {
         let mut title = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
-            self.pos += 1;
-            if c == ']' {
+            if c == '\n' || c == '\r' {
+                return Text { text: format!("[{}", title) };
+            }
+            if self.expect("]") {
                 break;
             }
             title.push(c);
+            self.pos += 1;
         }
         
         if self.expect("(") {
             let mut url = "".to_string();
             while self.pos < self.doc.len() {
                 let c = self.doc[self.pos];
-                self.pos += 1;
-                if c == ')' {
+                if c == '\n' || c == '\r' {
+                    return Text { text: format!("[{}]({}", title, url) };
+                }
+                if self.expect(")") {
                     break;
                 }
                 url.push(c);
+                self.pos += 1;
             }
             Link { title, url }
         } else { // exception
@@ -364,7 +370,7 @@ impl Convertor {
         let mut text = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
-            if self.expect("\n") || self.expect("\r\n") {
+            if c == '\n' || c == '\r' {
                 return Text { text: format!("{}{}", ind.to_string(), text) };
             }
             if self.expect(ind) {
@@ -384,11 +390,14 @@ impl Convertor {
         let mut code = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
-            self.pos += 1;
-            if c == '`' {
+            if c == '\n' || c == '\r' {
+                return Text { text: format!("`{}", code) };
+            }
+            if self.expect("`") {
                 break;
             }
             code.push(c);
+            self.pos += 1;
         }
         Code { code }
     }
@@ -398,6 +407,9 @@ impl Convertor {
         let mut url = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
+            if c == '\n' || c == '\r' {
+                return Text { text: format!("![]({}", url) };
+            }
             if self.expect(")") {
                 break;
             }
