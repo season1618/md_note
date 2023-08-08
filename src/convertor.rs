@@ -101,7 +101,7 @@ impl Convertor {
 
         // list
         if c == '*' || c == '+' || c == '-' {
-            return ListElement(self.parse_list(-1));
+            return ListElement(self.parse_list(0));
         }
 
         // table
@@ -158,31 +158,22 @@ impl Convertor {
         Blockquote { spans: self.parse_spans() }
     }
 
-    fn parse_list(&mut self, indent: i32) -> List {
+    fn parse_list(&mut self, min_indent: usize) -> List {
         let mut items = Vec::new();
         while self.pos < self.doc.len() {
-            let mut num = 0;
-            while self.pos + num < self.doc.len() {
-                let c = self.doc[self.pos + num];
-                if c == ' ' {
-                    num += 1;
-                } else {
-                    break;
-                }
+            let mut indent = 0;
+            while self.pos + indent < self.doc.len() && self.doc[self.pos + indent] == ' ' {
+                indent += 1;
             }
 
-            let c1 = self.doc[self.pos + num];
-            let c2 = self.doc[self.pos + num + 1];
-            if (c1 == '*' || c1 == '+' || c1 == '-') && c2 == ' ' {
-                if indent < num as i32 {
-                    self.pos += num + 2;
-                    items.push(ListItem {
-                        spans: self.parse_spans(),
-                        list: self.parse_list(num as i32),
-                    });
-                } else {
-                    break;
-                }
+            let c1 = self.doc[self.pos + indent];
+            let c2 = self.doc[self.pos + indent + 1];
+            if min_indent <= indent && (c1 == '*' || c1 == '+' || c1 == '-') && c2 == ' ' {
+                self.pos += indent + 2;
+                items.push(ListItem {
+                    spans: self.parse_spans(),
+                    list: self.parse_list(indent + 1),
+                });
             } else {
                 break;
             }
