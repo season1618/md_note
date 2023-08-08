@@ -451,7 +451,7 @@ impl Convertor {
     fn expect(&mut self, s: &str) -> bool {
         let cs: Vec<char> = s.chars().collect();
         for i in 0..s.len() {
-            if self.pos + i < self.doc.len() && self.doc[self.pos + i] != cs[i] {
+            if self.pos + i >= self.doc.len() || self.doc[self.pos + i] != cs[i] {
                 return false;
             }
         }
@@ -462,7 +462,7 @@ impl Convertor {
     fn consume(&mut self, s: &str) {
         let cs: Vec<char> = s.chars().collect();
         for i in 0..s.len() {
-            if self.doc[self.pos + i] != cs[i] {
+            if self.pos + i >= self.doc.len() || self.doc[self.pos + i] != cs[i] {
                 panic!("syntax error");
             }
         }
@@ -490,6 +490,7 @@ impl Convertor {
 
     fn gen_sidebar(&self, dest: &mut File) {
         writeln!(dest, "    <nav id=\"sidebar\">").unwrap();
+        writeln!(dest, "      <h4>{}</h4>", self.title).unwrap();
         self.gen_list(&self.toc, 6, dest);
         writeln!(dest, "    </nav>").unwrap();
     }
