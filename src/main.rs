@@ -14,12 +14,20 @@ fn main(){
     let src_path = &args[1];
     let dest_path = &args[2];
 
-    let mut dest = File::create(dest_path).unwrap();
+    let Ok(doc) = fs::read_to_string(src_path) else {
+        println!("could not open the source file.");
+        return;
+    };
 
-    if let Ok(doc) = fs::read_to_string(src_path) {
-        let (title, toc, content) = parse_markdown(&doc);
-        gen_html(&mut dest, &title, &toc, &content);
-    } else {
-        println!("could not open the file.");
-    }
+    let Ok(mut dest) = File::create(dest_path) else {
+        println!("could not open or create the destination file.");
+        return;
+    };
+
+    let (title, toc, content) = parse_markdown(&doc);
+    
+    let Ok(_) = gen_html(&mut dest, &title, &toc, &content) else {
+        println!("could not write to the destination file.");
+        return;
+    };
 }
