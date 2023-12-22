@@ -6,7 +6,7 @@ use Block::*;
 use Span::*;
 use EmphasisKind::*;
 
-pub fn gen_html(dest: &mut File, title: String, toc: List, content: Vec<Block>) {
+pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block>) {
     writeln!(dest, "<!DOCTYPE html>").unwrap();
     writeln!(dest, "<html>").unwrap();
     writeln!(dest, "<head>").unwrap();
@@ -25,16 +25,16 @@ pub fn gen_html(dest: &mut File, title: String, toc: List, content: Vec<Block>) 
     write!(dest, "</html>").unwrap();
 }
 
-fn gen_sidebar(dest: &mut File, title: String, toc: List) {
+fn gen_sidebar(dest: &mut File, title: &String, toc: &List) {
     writeln!(dest, "    <nav id=\"sidebar\">").unwrap();
     writeln!(dest, "      <h4>{}</h4>", title).unwrap();
     gen_list(&toc, 6, dest);
     writeln!(dest, "    </nav>").unwrap();
 }
 
-fn gen_content(dest: &mut File, content: Vec<Block>) {
+fn gen_content(dest: &mut File, content: &Vec<Block>) {
     writeln!(dest, "    <div id=\"content\">").unwrap();
-    for block in &content {
+    for block in content {
         match block {
             Header { spans, level, id } => { gen_header(spans, level, id, dest); },
             Blockquote { spans } => { gen_blockquote(spans, dest); },

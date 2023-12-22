@@ -17,8 +17,8 @@ fn main(){
     let mut dest = File::create(dest_path).unwrap();
 
     if let Ok(doc) = fs::read_to_string(src_path) {
-        let (title, toc, content) = parse_markdown(doc);
-        gen_html(&mut dest, title, toc, content);
+        let (title, toc, content) = parse_markdown(&doc);
+        gen_html(&mut dest, &title, &toc, &content);
     } else {
         println!("could not open the file.");
     }

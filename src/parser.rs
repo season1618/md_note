@@ -3,7 +3,7 @@ use Block::*;
 use Span::*;
 use EmphasisKind::*;
 
-pub fn parse_markdown(doc: String) -> (String, List, Vec<Block>) {
+pub fn parse_markdown(doc: &String) -> (String, List, Vec<Block>) {
     let mut parser = Parser::new(doc);
     parser.parse_markdown();
     return (parser.title, parser.toc, parser.content);
@@ -18,7 +18,7 @@ pub struct Parser {
 }
 
 impl Parser {
-    fn new(doc: String) -> Self {
+    fn new(doc: &String) -> Self {
         Parser {
             doc: doc.chars().collect(),
             pos: 0,
