@@ -3,32 +3,27 @@ use std::io::Write;
 use std::fs::File;
 
 use crate::data::*;
+use crate::template::*;
 
 use Block::*;
 use Span::*;
 use EmphasisKind::*;
+use Elem::*;
 
-pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block>) -> Result<(), io::Error> {
-    writeln!(dest, "<!DOCTYPE html>")?;
-    writeln!(dest, "<html>")?;
-    writeln!(dest, "<head>")?;
-    writeln!(dest, "  <meta charset=\"utf-8\">")?;
-    writeln!(dest, "  <link rel=\"stylesheet\" href=\"./index.css\">")?;
-    writeln!(dest, "  <title>{}</title>", title)?;
-    writeln!(dest, "</head>")?;
-    writeln!(dest, "<body>")?;
-    
-    writeln!(dest, "  <div id=\"wrapper\">")?;
-
-    gen_sidebar(dest, title, toc)?;
-    gen_content(dest, content)?;
-
-    writeln!(dest, "</body>")?;
-    write!(dest, "</html>")
+pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block>, template: &Vec<Elem>) -> Result<(), io::Error> {
+    for line in template {
+        match line {
+            Title(indent) => { writeln!(dest, "  <title>{}</title>", title)?; },
+            Toc(indent) => { gen_sidebar(dest, title, toc)?; },
+            Content(indent) => { gen_content(dest, content)?; },
+            Str(text) => { write!(dest, "{}", text)?; },
+        }
+    }
+    Ok(())
 }
 
 fn gen_sidebar(dest: &mut File, title: &String, toc: &List) -> Result<(), io::Error> {
-    writeln!(dest, "    <nav id=\"sidebar\">")?;
+    writeln!(dest, "    <nav id=\"toc\">")?;
     writeln!(dest, "      <h4>{}</h4>", title)?;
     gen_list(&toc, 6, dest)?;
     writeln!(dest, "    </nav>")
