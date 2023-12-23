@@ -228,10 +228,12 @@ impl Parser {
     }
 
     fn parse_code_block(&mut self) -> Block {
+        let mut lang = "".to_string();
         while self.pos < self.doc.len() {
             if self.expect("\n") || self.expect("\r\n") {
                 break;
             }
+            lang.push(self.doc[self.pos]);
             self.pos += 1;
         }
 
@@ -244,7 +246,7 @@ impl Parser {
             self.pos += 1;
         }
 
-        CodeBlock { code }
+        CodeBlock { lang, code }
     }
 
     fn parse_spans(&mut self) -> Vec<Span> {

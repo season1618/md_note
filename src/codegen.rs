@@ -38,11 +38,11 @@ fn gen_content(dest: &mut File, content: &Vec<Block>) -> Result<(), io::Error> {
             ListElement(list) => { gen_list(list, 6, dest)?; },
             Table { head, body } => { gen_table(head, body, dest)?; },
             Paragraph { spans } => { gen_paragraph(spans, dest)?; },
-            CodeBlock { code } => { gen_code_block(code, dest)?; },
+            CodeBlock { lang, code } => { gen_code_block(lang, code, dest)?; },
             _ => {},
         }
     }
-    writeln!(dest, "    <div>")
+    writeln!(dest, "    </div>")
 }
 
 fn gen_header(spans: &Vec<Span>, level: &u32, id: &String, dest: &mut File) -> Result<(), io::Error> {
@@ -102,10 +102,10 @@ fn gen_table(head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, dest: &mut File) 
     writeln!(dest, "      </table>")
 }
 
-fn gen_code_block(code: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "      <pre>")?;
+fn gen_code_block(lang: &String, code: &String, dest: &mut File) -> Result<(), io::Error> {
+    write!(dest, "      <pre><code class=\"language-{}\">", if lang == "" { "plaintext" } else { lang })?;
     write!(dest, "{}", code)?;
-    writeln!(dest, "</pre>")
+    writeln!(dest, "</code></pre>")
 }
 
 fn gen_paragraph(spans: &Vec<Span>, dest: &mut File) -> Result<(), io::Error> {
