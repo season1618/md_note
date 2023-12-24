@@ -1,9 +1,7 @@
-use std::io;
-use std::io::Write;
+use std::io::{self, Write};
 use std::fs::File;
 
 use crate::data::*;
-use crate::template::*;
 
 use Block::*;
 use Span::*;

@@ -1,15 +1,9 @@
 use std::io::{self, BufRead, BufReader};
 use std::fs::File;
 use regex::Regex;
-use Elem::*;
 
-#[derive(Debug)]
-pub enum Elem {
-    Title(usize),
-    Toc(usize),
-    Content(usize),
-    Str(String),
-}
+use crate::data::Elem;
+use Elem::*;
 
 pub fn read_template(dest_path: &str) -> Result<Vec<Elem>, io::Error> {
     let dest = File::open(dest_path)?;

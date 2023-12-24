@@ -35,3 +35,11 @@ pub enum EmphasisKind {
     Em,
     Strong,
 }
+
+#[derive(Debug)]
+pub enum Elem {
+    Title(usize),
+    Toc(usize),
+    Content(usize),
+    Str(String),
+}

@@ -4,8 +4,7 @@ pub mod template;
 pub mod codegen;
 
 use std::env;
-use std::fs;
-use std::fs::File;
+use std::fs::{self, File};
 
 use crate::parser::parse_markdown;
 use crate::template::read_template;
