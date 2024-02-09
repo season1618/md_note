@@ -3,6 +3,7 @@ pub enum Block {
     Header { spans: Vec<Span>, level: u32, id: String },
     Blockquote { spans: Vec<Span> },
     ListElement(List),
+    MathBlock { math: String },
     CodeBlock { lang: String, code: String },
     Table { head: Vec<Vec<String>>, body: Vec<Vec<String>> },
     Paragraph { spans: Vec<Span> },
@@ -13,6 +14,7 @@ pub enum Block {
 pub enum Span {
     Link { title: String, url: String },
     Emphasis { kind: EmphasisKind, text: String },
+    Math { math: String },
     Code { code: String },
     Image { url: String },
     Text { text: String },

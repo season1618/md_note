@@ -33,6 +33,7 @@ fn gen_content(dest: &mut File, content: &Vec<Block>, indent: usize) -> Result<(
             ListElement(list) => { gen_list(list, indent, dest)?; },
             Table { head, body } => { gen_table(head, body, indent, dest)?; },
             Paragraph { spans } => { gen_paragraph(spans, indent, dest)?; },
+            MathBlock { math } => { gen_math_block(math, indent, dest)?; },
             CodeBlock { lang, code } => { gen_code_block(lang, code, indent, dest)?; },
             _ => {},
         }
@@ -97,6 +98,10 @@ fn gen_table(head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, indent: usize, de
     writeln!(dest, "{:>indent$}</table>", " ")
 }
 
+fn gen_math_block(math: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
+    writeln!(dest, "{:>indent$}<p>\\[{}\\]</p>", " ", math)
+}
+
 fn gen_code_block(lang: &String, code: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
     write!(dest, "{:>indent$}<pre><code class=\"language-{}\">", " ", if lang == "" { "plaintext" } else { lang })?;
     write!(dest, "{}", code)?;
@@ -114,6 +119,7 @@ fn gen_spans(spans: &Vec<Span>, dest: &mut File) -> Result<(), io::Error> {
         match span {
             Link { title, url } => { gen_link(title, url, dest)?; },
             Emphasis { kind, text } => { gen_emphasis(kind, text, dest)?; },
+            Math { math } => { gen_math(math, dest)?; },
             Code { code } => { gen_code(code, dest)?; },
             Image { url } => { gen_image(url, dest)?; },
             Text { text } => { gen_text(text, dest)?; },
@@ -131,6 +137,10 @@ fn gen_emphasis(kind: &EmphasisKind, text: &String, dest: &mut File) -> Result<(
         Em => { write!(dest, "<em>{}</em>", *text) },
         Strong => { write!(dest, "<strong>{}</strong>", *text) },
     }
+}
+
+fn gen_math(math: &String, dest: &mut File) -> Result<(), io::Error> {
+    write!(dest, "\\({}\\)", *math)
 }
 
 fn gen_code(code: &String, dest: &mut File) -> Result<(), io::Error> {

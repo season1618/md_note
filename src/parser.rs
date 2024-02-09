@@ -76,6 +76,11 @@ impl Parser {
             return self.parse_table();
         }
 
+        // math block
+        if self.expect("$$") {
+            return self.parse_math_block();
+        }
+
         // code block
         if self.expect("```") {
             return self.parse_code_block();
@@ -227,6 +232,19 @@ impl Parser {
         Table { head, body }
     }
 
+    fn parse_math_block(&mut self) -> Block {
+        let mut math = "".to_string();
+        while self.pos < self.doc.len() {
+            if self.expect("$$") {
+                break;
+            }
+            math.push(self.doc[self.pos]);
+            self.pos += 1;
+        }
+
+        MathBlock { math }
+    }
+
     fn parse_code_block(&mut self) -> Block {
         let mut lang = "".to_string();
         while self.pos < self.doc.len() {
@@ -278,6 +296,12 @@ impl Parser {
             }
             if self.expect("_") {
                 spans.push(self.parse_emphasis("_"));
+                continue;
+            }
+
+            // math
+            if self.expect("$") {
+                spans.push(self.parse_math());
                 continue;
             }
 
@@ -352,6 +376,22 @@ impl Parser {
         } else {
             return Emphasis { kind: Strong, text };
         }
+    }
+
+    fn parse_math(&mut self) -> Span {
+        let mut math = "".to_string();
+        while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            if c == '\n' || c == '\r' {
+                return Text { text: format!("`{}", math) };
+            }
+            if self.expect("$") {
+                break;
+            }
+            math.push(c);
+            self.pos += 1;
+        }
+        Math { math }
     }
 
     fn parse_code(&mut self) -> Span {
