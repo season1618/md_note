@@ -41,6 +41,12 @@ pub enum EmphasisKind {
 #[derive(Debug)]
 pub enum Elem {
     Title,
+    Year,
+    Month,
+    Day,
+    Hour,
+    Minute,
+    Second,
     Toc(usize),
     Content(usize),
     Str(String),

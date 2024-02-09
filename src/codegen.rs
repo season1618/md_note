@@ -1,5 +1,6 @@
 use std::io::{self, Write};
 use std::fs::File;
+use chrono::{Local, Datelike, Timelike};
 
 use crate::data::*;
 
@@ -9,9 +10,16 @@ use EmphasisKind::*;
 use Elem::*;
 
 pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block>, template: &Vec<Elem>) -> Result<(), io::Error> {
+    let datetime = Local::now();
     for chunk in template {
         match chunk {
             Title => { write!(dest, "{}", title)?; },
+            Year => { write!(dest, "{}", datetime.year())?; },
+            Month => { write!(dest, "{}", datetime.month())?; },
+            Day => { write!(dest, "{}", datetime.day())?; },
+            Hour => { write!(dest, "{}", datetime.hour())?; },
+            Minute => { write!(dest, "{}", datetime.minute())?; },
+            Second => { write!(dest, "{}", datetime.second())?; },
             Toc(indent) => { gen_toc(dest, title, toc, *indent)?; },
             Content(indent) => { gen_content(dest, content, *indent)?; },
             Str(text) => { write!(dest, "{}", text)?; },

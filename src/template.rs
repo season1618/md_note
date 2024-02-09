@@ -24,6 +24,12 @@ pub fn read_template(path: &str) -> Result<Vec<Elem>, io::Error> {
             if let Some(attr) = attr_iter.next() {
                 template.push(match attr.as_str() {
                     "{title}" => Title,
+                    "{year}" => Year,
+                    "{month}" => Month,
+                    "{day}" => Day,
+                    "{hour}" => Hour,
+                    "{minute}" => Minute,
+                    "{second}" => Second,
                     "{toc}" => Toc(attr.start()),
                     "{content}" => Content(attr.start()),
                     _ => { println!("unknown attribute"); panic!(); },
