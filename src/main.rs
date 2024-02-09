@@ -13,7 +13,8 @@ use crate::codegen::gen_html;
 fn main(){
     let args: Vec<String> = env::args().collect();
     let src_path = &args[1];
-    let dest_path = &args[2];
+    let temp_path = &args[2];
+    let dest_path = &args[3];
 
     let Ok(doc) = fs::read_to_string(src_path) else {
         println!("could not open the source file.");
@@ -22,7 +23,7 @@ fn main(){
 
     let (title, toc, content) = parse_markdown(&doc);
 
-    let Ok(template) = read_template(dest_path) else {
+    let Ok(temp) = read_template(temp_path) else {
         println!("could not open or read the destination file.");
         return;
     };
@@ -32,7 +33,7 @@ fn main(){
         return;
     };
     
-    let Ok(_) = gen_html(&mut dest, &title, &toc, &content, &template) else {
+    let Ok(_) = gen_html(&mut dest, &title, &toc, &content, &temp) else {
         println!("could not write to the destination file.");
         return;
     };

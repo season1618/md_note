@@ -9,10 +9,10 @@ use EmphasisKind::*;
 use Elem::*;
 
 pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block>, template: &Vec<Elem>) -> Result<(), io::Error> {
-    for line in template {
-        match line {
-            Title(ref indent) => { writeln!(dest, "{:>indent$}<title>{}</title>", " ", title)?; },
-            Toc(indent) => { gen_sidebar(dest, title, toc, *indent)?; },
+    for chunk in template {
+        match chunk {
+            Title => { write!(dest, "{}", title)?; },
+            Toc(indent) => { gen_toc(dest, title, toc, *indent)?; },
             Content(indent) => { gen_content(dest, content, *indent)?; },
             Str(text) => { write!(dest, "{}", text)?; },
         }
@@ -20,27 +20,24 @@ pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block
     Ok(())
 }
 
-fn gen_sidebar(dest: &mut File, title: &String, toc: &List, indent: usize) -> Result<(), io::Error> {
-    writeln!(dest, "{:>indent$}<nav id=\"toc\">", " ")?;
-    writeln!(dest, "{:>indent$}  <h4>{}</h4>", " ", title)?;
-    gen_list(&toc, indent + 2, dest)?;
-    writeln!(dest, "{:>indent$}</nav>", " ")
+fn gen_toc(dest: &mut File, title: &String, toc: &List, indent: usize) -> Result<(), io::Error> {
+    writeln!(dest, "<h4>{}</h4>", title)?;
+    gen_list(&toc, indent, dest)
 }
 
 fn gen_content(dest: &mut File, content: &Vec<Block>, indent: usize) -> Result<(), io::Error> {
-    writeln!(dest, "{:>indent$}<div id=\"content\">", " ")?;
     for block in content {
         match block {
-            Header { spans, level, id } => { gen_header(spans, level, id, indent + 2, dest)?; },
-            Blockquote { spans } => { gen_blockquote(spans, indent + 2, dest)?; },
-            ListElement(list) => { gen_list(list, indent + 2, dest)?; },
-            Table { head, body } => { gen_table(head, body, indent + 2, dest)?; },
-            Paragraph { spans } => { gen_paragraph(spans, indent + 2, dest)?; },
-            CodeBlock { lang, code } => { gen_code_block(lang, code, indent + 2, dest)?; },
+            Header { spans, level, id } => { gen_header(spans, level, id, indent, dest)?; },
+            Blockquote { spans } => { gen_blockquote(spans, indent, dest)?; },
+            ListElement(list) => { gen_list(list, indent, dest)?; },
+            Table { head, body } => { gen_table(head, body, indent, dest)?; },
+            Paragraph { spans } => { gen_paragraph(spans, indent, dest)?; },
+            CodeBlock { lang, code } => { gen_code_block(lang, code, indent, dest)?; },
             _ => {},
         }
     }
-    writeln!(dest, "{:>indent$}</div>", " ")
+    Ok(())
 }
 
 fn gen_header(spans: &Vec<Span>, level: &u32, id: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {

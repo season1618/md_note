@@ -5,35 +5,30 @@ use regex::Regex;
 use crate::data::Elem;
 use Elem::*;
 
-pub fn read_template(dest_path: &str) -> Result<Vec<Elem>, io::Error> {
-    let dest = File::open(dest_path)?;
-    let mut reader = BufReader::new(dest);
+pub fn read_template(path: &str) -> Result<Vec<Elem>, io::Error> {
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file);
     let mut line = String::new();
     let mut template: Vec<Elem> = Vec::new();
-
-    let regex_title = Regex::new("<title>.*</title>").unwrap();
-    let regex_toc_begin = Regex::new("<nav id=\"toc\">").unwrap();
-    let regex_toc_end = Regex::new("</nav>").unwrap();
-    let regex_content_begin = Regex::new("<div id=\"content\">").unwrap();
-    let regex_content_end = Regex::new("</div>").unwrap();
+    let pattern = Regex::new("\\{[a-z]+\\}").unwrap();
 
     while reader.read_line(&mut line)? > 0 {
-        if let Some(m) = regex_title.find(&line) {
-            template.push(Title(m.start()));
-        } else if let Some(m) = regex_toc_begin.find(&line) {
-            template.push(Toc(m.start()));
-            while reader.read_line(&mut line)? > 0 {
-                if regex_toc_end.is_match(&line) { break; }
-                line.clear();
+        let mut text_iter = pattern.split(&line);
+        let mut attr_iter = pattern.find_iter(&line);
+        loop {
+            if let Some(text) = text_iter.next() {
+                template.push(Str(text.to_string()));
+            } else {
+                break;
             }
-        } else if let Some(m) = regex_content_begin.find(&line) {
-            template.push(Content(m.start()));
-            while reader.read_line(&mut line)? > 0 {
-                if regex_content_end.is_match(&line) { break; }
-                line.clear();
+            if let Some(attr) = attr_iter.next() {
+                template.push(match attr.as_str() {
+                    "{title}" => Title,
+                    "{toc}" => Toc(attr.start()),
+                    "{content}" => Content(attr.start()),
+                    _ => { println!("unknown attribute"); panic!(); },
+                });
             }
-        } else {
-            template.push(Str(line.clone()));
         }
         line.clear();
     }

@@ -38,7 +38,7 @@ pub enum EmphasisKind {
 
 #[derive(Debug)]
 pub enum Elem {
-    Title(usize),
+    Title,
     Toc(usize),
     Content(usize),
     Str(String),
