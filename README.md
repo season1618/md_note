@@ -1,13 +1,12 @@
 # MD Note
-Markdown Convertor for HTML
+Markdown convertor for HTML
 
+build:
 ```
 $ cargo build --release
 ```
 
-to build.
-
+convert:
 ```
-$ md_note.exe <src>.md <dest>.html
+$ md_note.exe <source>.md <template>.html <destination>.html
 ```
-to convert markdown file to html.
