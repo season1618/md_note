@@ -171,65 +171,41 @@ impl Parser {
     fn parse_table(&mut self) -> Block {
         let mut head = Vec::new();
         let mut body = Vec::new();
-        loop {
-            let mut row = Vec::new();
-            let mut data = "".to_string();
-            let mut is_row = false;
-            if !self.expect("|") {
-                break;
-            }
-            while self.pos < self.doc.len() {
-                if self.expect("\n") || self.expect("\r\n") {
-                    break;
-                }
-                if self.expect("|") {
-                    row.push(data);
-                    data = "".to_string();
-                } else {
-                    if self.doc[self.pos] != ' ' && self.doc[self.pos] != '-' {
-                        is_row = true;
-                    }
-                    data.push_str(&self.escape(self.doc[self.pos]));
-                    self.pos += 1;
-                }
-            }
-            if is_row {
-                head.push(row);
-            } else {
-                break;
-            }
+        while let Some(row) = self.parse_table_row() {
+            head.push(row);
         }
-
-        loop {
-            let mut row = Vec::new();
-            let mut data = "".to_string();
-            let mut is_row = false;
-            if !self.expect("|") {
-                break;
-            }
-            while self.pos < self.doc.len() {
-                if self.expect("\n") || self.expect("\r\n") {
-                    break;
-                }
-                if self.expect("|") {
-                    row.push(data);
-                    data = "".to_string();
-                } else {
-                    if self.doc[self.pos] != ' ' && self.doc[self.pos] != '-' {
-                        is_row = true;
-                    }
-                    data.push_str(&self.escape(self.doc[self.pos]));
-                    self.pos += 1;
-                }
-            }
-            if is_row {
-                body.push(row);
-            } else {
-                break;
-            }
+        while let Some(row) = self.parse_table_row() {
+            body.push(row);
         }
-
         Table { head, body }
+    }
+
+    fn parse_table_row(&mut self) -> Option<Vec<String>> {
+        if !self.expect("|") {
+            return None;
+        }
+
+        let mut row: Vec<String> = Vec::new();
+        loop {
+            let mut data = "".to_string();
+            loop {
+                if self.expect("\n") || self.expect("\r\n") {
+                    if row.iter().all(|s| s.chars().all(|c| c == '-' || c == ' ')) {
+                        return None;
+                    }
+                    return Some(row);
+                }
+                if self.expect("|") {
+                    row.push(data);
+                    break;
+                }
+                if let Some(c) = self.next_char() {
+                    data.push_str(&self.escape(c));
+                    continue;
+                }
+                return Some(row);
+            }
+        }
     }
 
     fn parse_math_block(&mut self) -> Block {
@@ -478,6 +454,14 @@ impl Parser {
             return true;
         }
         false
+    }
+
+    fn next_char(&mut self) -> Option<char> {
+        if self.pos < self.doc.len() {
+            self.pos += 1;
+            return Some(self.doc[self.pos - 1]);
+        }
+        None
     }
 
     fn escape(&self, c: char) -> String {
