@@ -327,7 +327,7 @@ impl Parser {
     }
 
     fn parse_link(&mut self) -> Span {
-        self.consume("[");
+        self.expect("[");
 
         let mut title = "".to_string();
         while self.pos < self.doc.len() {
@@ -414,7 +414,7 @@ impl Parser {
     }
 
     fn parse_image(&mut self) -> Span {
-        self.consume("(");
+        self.expect("(");
         let mut url = "".to_string();
         while self.pos < self.doc.len() {
             let c = self.doc[self.pos];
@@ -473,23 +473,11 @@ impl Parser {
 
     fn expect(&mut self, s: &str) -> bool {
         let cs: Vec<char> = s.chars().collect();
-        for i in 0..s.len() {
-            if self.pos + i >= self.doc.len() || self.doc[self.pos + i] != cs[i] {
-                return false;
-            }
+        if self.pos + cs.len() <= self.doc.len() && self.doc[self.pos .. self.pos + cs.len()] == cs {
+            self.pos += cs.len();
+            return true;
         }
-        self.pos += s.len();
-        return true;
-    }
-
-    fn consume(&mut self, s: &str) {
-        let cs: Vec<char> = s.chars().collect();
-        for i in 0..s.len() {
-            if self.pos + i >= self.doc.len() || self.doc[self.pos + i] != cs[i] {
-                panic!("syntax error");
-            }
-        }
-        self.pos += s.len();
+        false
     }
 
     fn escape(&self, c: char) -> String {
