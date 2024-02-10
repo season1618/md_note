@@ -231,13 +231,12 @@ impl Parser {
     fn parse_spans(&mut self) -> Vec<Span> {
         let mut spans = Vec::new();
         while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
             if self.expect("\n") || self.expect("\r\n") { // ends at new line
                 break;
             }
 
             // link
-            if c == '[' {
+            if self.expect("[") {
                 spans.push(self.parse_link());
                 continue;
             }
@@ -273,7 +272,7 @@ impl Parser {
             }
 
             // image
-            if self.expect("![]") {
+            if self.expect("![](") {
                 spans.push(self.parse_image());
                 continue;
             }
@@ -285,8 +284,6 @@ impl Parser {
     }
 
     fn parse_link(&mut self) -> Span {
-        self.expect("[");
-
         let mut title = "".to_string();
         while let Some(c) = self.next_char_line_term("]") {
             if c == '\n' {
@@ -349,7 +346,6 @@ impl Parser {
     }
 
     fn parse_image(&mut self) -> Span {
-        self.expect("(");
         let mut url = "".to_string();
         while let Some(c) = self.next_char_line_term(")") {
             if c == '\n' {
