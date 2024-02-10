@@ -288,50 +288,37 @@ impl Parser {
         self.expect("[");
 
         let mut title = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if c == '\n' || c == '\r' {
+        while let Some(c) = self.next_char_line_term("]") {
+            if c == '\n' {
                 return Text { text: format!("[{}", title) };
             }
-            if self.expect("]") {
-                break;
-            }
             title.push_str(&self.escape(c));
-            self.pos += 1;
         }
-        
-        if self.expect("(") {
-            let mut url = "".to_string();
-            while self.pos < self.doc.len() {
-                let c = self.doc[self.pos];
-                if c == '\n' || c == '\r' {
-                    return Text { text: format!("[{}]({}", title, url) };
-                }
-                if self.expect(")") {
-                    break;
-                }
-                url.push_str(&self.escape(c));
-                self.pos += 1;
+
+        if !self.expect("(") {
+            return Text { text: title };
+        }
+
+        let mut url = "".to_string();
+        while let Some(c) = self.next_char_line_term(")") {
+            if c == '\n' {
+                return Text { text: format!("[{}]({}", title, url) };
             }
-            Link { title, url }
-        } else { // exception
-            Text { text: title }
+            url.push_str(&self.escape(c));
         }
+
+        Link { title, url }
     }
 
     fn parse_emphasis(&mut self, ind: &str) -> Span {
         let mut text = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if c == '\n' || c == '\r' {
+        while let Some(c) = self.next_char_line_term(ind) {
+            if c == '\n' {
                 return Text { text: format!("{}{}", ind.to_string(), text) };
             }
-            if self.expect(ind) {
-                break;
-            }
             text.push_str(&self.escape(c));
-            self.pos += 1;
         }
+
         if ind == "*" || ind == "_" {
             return Emphasis { kind: Em, text };
         } else {
@@ -341,32 +328,22 @@ impl Parser {
 
     fn parse_math(&mut self) -> Span {
         let mut math = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if c == '\n' || c == '\r' {
-                return Text { text: format!("`{}", math) };
-            }
-            if self.expect("$") {
-                break;
+        while let Some(c) = self.next_char_line_term("$") {
+            if c == '\n' {
+                return Text { text: format!("${}", math) };
             }
             math.push_str(&self.escape(c));
-            self.pos += 1;
         }
         Math { math }
     }
 
     fn parse_code(&mut self) -> Span {
         let mut code = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if c == '\n' || c == '\r' {
+        while let Some(c) = self.next_char_line_term("`") {
+            if c == '\n' {
                 return Text { text: format!("`{}", code) };
             }
-            if self.expect("`") {
-                break;
-            }
             code.push_str(&self.escape(c));
-            self.pos += 1;
         }
         Code { code }
     }
@@ -374,16 +351,11 @@ impl Parser {
     fn parse_image(&mut self) -> Span {
         self.expect("(");
         let mut url = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if c == '\n' || c == '\r' {
+        while let Some(c) = self.next_char_line_term(")") {
+            if c == '\n' {
                 return Text { text: format!("![]({}", url) };
             }
-            if self.expect(")") {
-                break;
-            }
             url.push_str(&self.escape(c));
-            self.pos += 1;
         }
         Image { url }
     }
@@ -453,8 +425,25 @@ impl Parser {
             return None;
         }
         if self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
             self.pos += 1;
-            return Some(self.doc[self.pos - 1]);
+            return Some(c);
+        }
+        None
+    }
+
+    fn next_char_line_term(&mut self, term: &str) -> Option<char> {
+        let terms: Vec<char> = term.chars().collect();
+        if self.pos + terms.len() <= self.doc.len() && self.doc[self.pos .. self.pos + terms.len()] == terms {
+            self.pos += terms.len();
+            return None;
+        }
+        if self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
+            if c != '\n' && c != '\r' {
+                self.pos += 1;
+            }
+            return Some(c);
         }
         None
     }
