@@ -210,39 +210,21 @@ impl Parser {
 
     fn parse_math_block(&mut self) -> Block {
         let mut math = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if self.expect("$$") {
-                break;
-            }
+        while let Some(c) = self.next_char_term("$$") {
             math.push_str(&self.escape(c));
-            self.pos += 1;
         }
-
         MathBlock { math }
     }
 
     fn parse_code_block(&mut self) -> Block {
         let mut lang = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if self.expect("\n") || self.expect("\r\n") {
-                break;
-            }
+        while let Some(c) = self.next_char_term("\n") {
             lang.push_str(&self.escape(c));
-            self.pos += 1;
         }
-
         let mut code = "".to_string();
-        while self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if self.expect("```") {
-                break;
-            }
+        while let Some(c) = self.next_char_term("```") {
             code.push_str(&self.escape(c));
-            self.pos += 1;
         }
-
         CodeBlock { lang, code }
     }
 
@@ -457,6 +439,19 @@ impl Parser {
     }
 
     fn next_char(&mut self) -> Option<char> {
+        if self.pos < self.doc.len() {
+            self.pos += 1;
+            return Some(self.doc[self.pos - 1]);
+        }
+        None
+    }
+
+    fn next_char_term(&mut self, term: &str) -> Option<char> {
+        let terms: Vec<char> = term.chars().collect();
+        if self.pos + terms.len() <= self.doc.len() && self.doc[self.pos .. self.pos + terms.len()] == terms {
+            self.pos += terms.len();
+            return None;
+        }
         if self.pos < self.doc.len() {
             self.pos += 1;
             return Some(self.doc[self.pos - 1]);
