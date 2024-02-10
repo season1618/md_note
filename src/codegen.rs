@@ -14,12 +14,12 @@ pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block
     for chunk in template {
         match chunk {
             Title => { write!(dest, "{}", title)?; },
-            Year => { write!(dest, "{}", datetime.year())?; },
-            Month => { write!(dest, "{}", datetime.month())?; },
-            Day => { write!(dest, "{}", datetime.day())?; },
-            Hour => { write!(dest, "{}", datetime.hour())?; },
-            Minute => { write!(dest, "{}", datetime.minute())?; },
-            Second => { write!(dest, "{}", datetime.second())?; },
+            Year => { write!(dest, "{:04}", datetime.year())?; },
+            Month => { write!(dest, "{:02}", datetime.month())?; },
+            Day => { write!(dest, "{:02}", datetime.day())?; },
+            Hour => { write!(dest, "{:02}", datetime.hour())?; },
+            Minute => { write!(dest, "{:02}", datetime.minute())?; },
+            Second => { write!(dest, "{:02}", datetime.second())?; },
             Toc(indent) => { gen_toc(dest, title, toc, *indent)?; },
             Content(indent) => { gen_content(dest, content, *indent)?; },
             Str(text) => { write!(dest, "{}", text)?; },
