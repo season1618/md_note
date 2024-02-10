@@ -43,7 +43,6 @@ fn gen_content(dest: &mut File, content: &Vec<Block>, indent: usize) -> Result<(
             Paragraph { spans } => { gen_paragraph(spans, indent, dest)?; },
             MathBlock { math } => { gen_math_block(math, indent, dest)?; },
             CodeBlock { lang, code } => { gen_code_block(lang, code, indent, dest)?; },
-            _ => {},
         }
     }
     Ok(())

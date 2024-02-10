@@ -7,7 +7,6 @@ pub enum Block {
     CodeBlock { lang: String, code: String },
     Table { head: Vec<Vec<String>>, body: Vec<Vec<String>> },
     Paragraph { spans: Vec<Span> },
-    LineBreak,
 }
 
 #[derive(Clone, Debug)]

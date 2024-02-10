@@ -32,7 +32,7 @@ impl Parser {
         while self.pos < self.doc.len() {
             let block = self.parse_block();
             match block {
-                LineBreak => {},
+                Paragraph { spans } if spans.is_empty() => {},
                 _ => { self.content.push(block); },
             }
         }
@@ -86,13 +86,8 @@ impl Parser {
             return self.parse_code_block();
         }
 
-        // paragraph, line break
-        let spans = self.parse_spans();
-        if !spans.is_empty() {
-            return Paragraph { spans };
-        } else {
-            return LineBreak;
-        }
+        // paragraph
+        return self.parse_paragraph();
     }
 
     fn parse_header(&mut self, level: u32) -> Block {
@@ -226,6 +221,10 @@ impl Parser {
             code.push_str(&self.escape(c));
         }
         CodeBlock { lang, code }
+    }
+
+    fn parse_paragraph(&mut self) -> Block {
+        Paragraph { spans: self.parse_spans() }
     }
 
     fn parse_spans(&mut self) -> Vec<Span> {
