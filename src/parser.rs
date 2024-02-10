@@ -189,7 +189,7 @@ impl Parser {
                     if self.doc[self.pos] != ' ' && self.doc[self.pos] != '-' {
                         is_row = true;
                     }
-                    data.push(self.doc[self.pos]);
+                    data.push_str(&self.escape(self.doc[self.pos]));
                     self.pos += 1;
                 }
             }
@@ -218,7 +218,7 @@ impl Parser {
                     if self.doc[self.pos] != ' ' && self.doc[self.pos] != '-' {
                         is_row = true;
                     }
-                    data.push(self.doc[self.pos]);
+                    data.push_str(&self.escape(self.doc[self.pos]));
                     self.pos += 1;
                 }
             }
@@ -235,10 +235,11 @@ impl Parser {
     fn parse_math_block(&mut self) -> Block {
         let mut math = "".to_string();
         while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
             if self.expect("$$") {
                 break;
             }
-            math.push(self.doc[self.pos]);
+            math.push_str(&self.escape(c));
             self.pos += 1;
         }
 
@@ -248,19 +249,21 @@ impl Parser {
     fn parse_code_block(&mut self) -> Block {
         let mut lang = "".to_string();
         while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
             if self.expect("\n") || self.expect("\r\n") {
                 break;
             }
-            lang.push(self.doc[self.pos]);
+            lang.push_str(&self.escape(c));
             self.pos += 1;
         }
 
         let mut code = "".to_string();
         while self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
             if self.expect("```") {
                 break;
             }
-            code.push(self.doc[self.pos]);
+            code.push_str(&self.escape(c));
             self.pos += 1;
         }
 
@@ -335,7 +338,7 @@ impl Parser {
             if self.expect("]") {
                 break;
             }
-            title.push(c);
+            title.push_str(&self.escape(c));
             self.pos += 1;
         }
         
@@ -349,7 +352,7 @@ impl Parser {
                 if self.expect(")") {
                     break;
                 }
-                url.push(c);
+                url.push_str(&self.escape(c));
                 self.pos += 1;
             }
             Link { title, url }
@@ -368,7 +371,7 @@ impl Parser {
             if self.expect(ind) {
                 break;
             }
-            text.push(c);
+            text.push_str(&self.escape(c));
             self.pos += 1;
         }
         if ind == "*" || ind == "_" {
@@ -388,7 +391,7 @@ impl Parser {
             if self.expect("$") {
                 break;
             }
-            math.push(c);
+            math.push_str(&self.escape(c));
             self.pos += 1;
         }
         Math { math }
@@ -404,7 +407,7 @@ impl Parser {
             if self.expect("`") {
                 break;
             }
-            code.push(c);
+            code.push_str(&self.escape(c));
             self.pos += 1;
         }
         Code { code }
@@ -421,7 +424,7 @@ impl Parser {
             if self.expect(")") {
                 break;
             }
-            url.push(c);
+            url.push_str(&self.escape(c));
             self.pos += 1;
         }
         Image { url }
@@ -437,7 +440,7 @@ impl Parser {
             if c == '[' || c == '`' || c == '*' || c == '_' {
                 break;
             }
-            text.push(c);
+            text.push_str(&self.escape(c));
             self.pos += 1;
         }
         Text { text }
@@ -487,5 +490,13 @@ impl Parser {
             }
         }
         self.pos += s.len();
+    }
+
+    fn escape(&self, c: char) -> String {
+        match c {
+            '<' => "&lt;".to_string(),
+            '>' => "&gt;".to_string(),
+            _ => c.to_string(),
+        }
     }
 }
