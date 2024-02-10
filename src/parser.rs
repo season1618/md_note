@@ -97,6 +97,7 @@ impl Parser {
             match span {
                 Link { title, .. } => { id.push_str(title); },
                 Emphasis { text, .. } => { id.push_str(text); },
+                Math { math } => { id.push_str(&format!("\\({}\\)", math)) },
                 Code { code } => { id.push_str(code); },
                 Text { text } => { id.push_str(text); },
                 _ => {},
