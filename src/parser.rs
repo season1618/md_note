@@ -233,7 +233,7 @@ impl Parser {
     fn parse_code_block(&mut self) -> Block {
         let mut lang = "".to_string();
         while let Some(c) = self.next_char_term("\n") {
-            lang.push_str(&self.escape(c));
+            lang.push(c);
         }
         let mut code = "".to_string();
         while let Some(c) = self.next_char_term("```") {
@@ -319,7 +319,7 @@ impl Parser {
             if c == '\n' {
                 return Text { text: format!("[{}]({}", text, url) };
             }
-            url.push_str(&self.escape(c));
+            url.push(c);
         }
 
         if text.is_empty() {
@@ -373,7 +373,7 @@ impl Parser {
             if c == '\n' {
                 return Text { text: format!("![]({}", url) };
             }
-            url.push_str(&self.escape(c));
+            url.push(c);
         }
         Image { url }
     }
