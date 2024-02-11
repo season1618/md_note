@@ -1,3 +1,7 @@
+use tokio;
+use regex::Regex;
+use reqwest;
+
 use crate::data::*;
 use Block::*;
 use Span::*;
@@ -95,7 +99,7 @@ impl Parser {
         let mut id = "".to_string();
         for span in &spans {
             match span {
-                Link { title, .. } => { id.push_str(title); },
+                Link { text, .. } => { id.push_str(text); },
                 Emphasis { text, .. } => { id.push_str(text); },
                 Math { math } => { id.push_str(&format!("\\({}\\)", math)) },
                 Code { code } => { id.push_str(code); },
@@ -115,7 +119,7 @@ impl Parser {
                 cur = &mut cur.items.last_mut().unwrap().list;
             }
             cur.items.push(ListItem {
-                spans: vec![ Link { title: id.clone(), url }],
+                spans: vec![ Link { text: id.clone(), url }],
                 list: List { ordered: true, items: Vec::new() },
             });
         }
@@ -284,27 +288,33 @@ impl Parser {
     }
 
     fn parse_link(&mut self) -> Span {
-        let mut title = "".to_string();
+        let mut text = "".to_string();
         while let Some(c) = self.next_char_line_term("]") {
             if c == '\n' {
-                return Text { text: format!("[{}", title) };
+                return Text { text: format!("[{}", text) };
             }
-            title.push_str(&self.escape(c));
+            text.push_str(&self.escape(c));
         }
 
         if !self.expect("(") {
-            return Text { text: title };
+            return Text { text };
         }
 
         let mut url = "".to_string();
         while let Some(c) = self.next_char_line_term(")") {
             if c == '\n' {
-                return Text { text: format!("[{}]({}", title, url) };
+                return Text { text: format!("[{}]({}", text, url) };
             }
             url.push_str(&self.escape(c));
         }
 
-        Link { title, url }
+        if text.is_empty() {
+            if let Some(title) = get_title(&url) {
+                text = title;
+            }
+        }
+
+        Link { text, url }
     }
 
     fn parse_emphasis(&mut self, ind: &str) -> Span {
@@ -451,4 +461,12 @@ impl Parser {
             _ => c.to_string(),
         }
     }
+}
+
+#[tokio::main]
+async fn get_title(url: &String) -> Option<String> {
+    let body = reqwest::get(url).await.ok()?.text().await.ok()?;
+    let pattern = Regex::new("<title>(.*)</title>").ok()?;
+    let title = pattern.captures(&body)?.get(1)?.as_str();
+    Some(title.to_string().clone())
 }

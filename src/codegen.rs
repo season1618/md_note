@@ -124,7 +124,7 @@ fn gen_paragraph(spans: &Vec<Span>, indent: usize, dest: &mut File) -> Result<()
 fn gen_spans(spans: &Vec<Span>, dest: &mut File) -> Result<(), io::Error> {
     for span in spans {
         match span {
-            Link { title, url } => { gen_link(title, url, dest)?; },
+            Link { text, url } => { gen_link(text, url, dest)?; },
             Emphasis { kind, text } => { gen_emphasis(kind, text, dest)?; },
             Math { math } => { gen_math(math, dest)?; },
             Code { code } => { gen_code(code, dest)?; },
@@ -135,8 +135,8 @@ fn gen_spans(spans: &Vec<Span>, dest: &mut File) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn gen_link(title: &String, url: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "<a href=\"{}\">{}</a>", *url, *title)
+fn gen_link(text: &String, url: &String, dest: &mut File) -> Result<(), io::Error> {
+    write!(dest, "<a href=\"{}\">{}</a>", *url, *text)
 }
 
 fn gen_emphasis(kind: &EmphasisKind, text: &String, dest: &mut File) -> Result<(), io::Error> {
