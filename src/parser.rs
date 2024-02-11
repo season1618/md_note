@@ -491,11 +491,11 @@ async fn get_title(url: &String) -> String {
 }
 
 #[tokio::main]
-async fn get_ogp_info(url: &String) -> (String, String, String, String) {
+async fn get_ogp_info(url: &String) -> (String, Option<String>, Option<String>, Option<String>) {
     let mut title = "".to_string();
-    let mut image = "".to_string();
-    let mut description = "".to_string();
-    let mut site_name = "".to_string();
+    let mut image = None;
+    let mut description = None;
+    let mut site_name = None;
 
     let Ok(res) = reqwest::get(url).await else {
         return (title, image, description, site_name);
@@ -508,11 +508,19 @@ async fn get_ogp_info(url: &String) -> (String, String, String, String) {
     for caps in regex.captures_iter(&body) {
         match &caps[1] {
             "title" => { title = caps[2].to_string(); },
-            "image" => { image = caps[2].to_string(); },
-            "description" => { description = caps[2].to_string(); },
-            "site_name" => { site_name = caps[2].to_string(); },
+            "image" => { image = Some(caps[2].to_string()); },
+            "description" => { description = Some(caps[2].to_string()); },
+            "site_name" => { site_name = Some(caps[2].to_string()); },
             _ => {},
         }
     }
+
+    if title.is_empty() {
+        let regex = Regex::new("<title>(.*)</title>").unwrap();
+        if let Some(caps) = regex.captures(&body) {
+            title = caps[1].to_string();
+        }
+    }
+
     (title, image, description, site_name)
 }

@@ -80,10 +80,17 @@ fn gen_list(list: &List, indent: usize, dest: &mut File) -> Result<(), io::Error
     writeln!(dest, "{:>indent$}</{}>", " ", if list.ordered { "ol" } else { "ul" })
 }
 
-fn gen_link_card(title: &String, image: &String, url: &String, description: &String, site_name: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
+fn gen_link_card(title: &String, image: &Option<String>, url: &String, description: &Option<String>, site_name: &Option<String>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
     writeln!(dest, "{:>indent$}<div class=\"link-card\"><a href=\"{}\">", "", url)?;
-    writeln!(dest, "{:>indent$}  <div><h3>{}</h3><p>{}</p></div>", "", title, description)?;
-    writeln!(dest, "{:>indent$}  <img src=\"{}\">", "", image)?;
+    writeln!(dest, "{:>indent$}  <div>", "")?;
+    writeln!(dest, "{:>indent$}    <h3>{}</h3>", "", title)?;
+    if let Some(desc) = description {
+        writeln!(dest, "{:>indent$}    <p>{}</p>", "", desc)?;
+    }
+    writeln!(dest, "{:>indent$}  </div>", "")?;
+    if let Some(img) = image {
+        writeln!(dest, "{:>indent$}  <img src=\"{}\">", "", img)?;
+    }
     writeln!(dest, "{:>indent$}</a></div>", "")
 }
 
