@@ -81,15 +81,16 @@ fn gen_list(list: &List, indent: usize, dest: &mut File) -> Result<(), io::Error
 }
 
 fn gen_link_card(title: &String, image: &Option<String>, url: &String, description: &Option<String>, site_name: &Option<String>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    writeln!(dest, "{:>indent$}<div class=\"link-card\"><a href=\"{}\">", "", url)?;
-    writeln!(dest, "{:>indent$}  <div>", "")?;
-    writeln!(dest, "{:>indent$}    <h3>{}</h3>", "", title)?;
+    writeln!(dest, "{:>indent$}<div class=\"linkcard\"><a class=\"linkcard-link\" href=\"{}\">", "", url)?;
+    writeln!(dest, "{:>indent$}  <div class=\"linkcard-text\">", "")?;
+    writeln!(dest, "{:>indent$}    <h3 class=\"linkcard-title\">{}</h3>", "", title)?;
     if let Some(desc) = description {
-        writeln!(dest, "{:>indent$}    <p>{}</p>", "", desc)?;
+        writeln!(dest, "{:>indent$}    <p class=\"linkcard-description\">{}</p>", "", desc)?;
     }
+    writeln!(dest, "{:>indent$}    <img  class=\"linkcard-favicon\" src=\"http://www.google.com/s2/favicons?domain={}\"><span  class=\"linkcard-sitename\">{}</span>", "", url, site_name.clone().unwrap_or(url.clone()))?;
     writeln!(dest, "{:>indent$}  </div>", "")?;
     if let Some(img) = image {
-        writeln!(dest, "{:>indent$}  <img src=\"{}\">", "", img)?;
+        writeln!(dest, "{:>indent$}  <img class=\"linkcard-image\" src=\"{}\">", "", img)?;
     }
     writeln!(dest, "{:>indent$}</a></div>", "")
 }
