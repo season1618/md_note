@@ -75,6 +75,11 @@ impl Parser {
             return ListElement(self.parse_list(0));
         }
 
+        // link card
+        if self.expect("?[](") {
+            return self.parse_link_card();
+        }
+
         // table
         if c == '|' {
             return self.parse_table();
@@ -166,6 +171,15 @@ impl Parser {
             break;
         }
         List { ordered, items }
+    }
+
+    fn parse_link_card(&mut self) -> Block {
+        let mut url = "".to_string();
+        while let Some(c) = self.next_char_term(")") {
+            url.push(c);
+        }
+        let (title, image, description, site_name) = get_ogp_info(&url);
+        LinkCard { title, image, url, description, site_name }
     }
 
     fn parse_table(&mut self) -> Block {
@@ -309,9 +323,7 @@ impl Parser {
         }
 
         if text.is_empty() {
-            if let Some(title) = get_title(&url) {
-                text = title;
-            }
+            text = get_title(&url);
         }
 
         Link { text, url }
@@ -464,9 +476,43 @@ impl Parser {
 }
 
 #[tokio::main]
-async fn get_title(url: &String) -> Option<String> {
-    let body = reqwest::get(url).await.ok()?.text().await.ok()?;
-    let pattern = Regex::new("<title>(.*)</title>").ok()?;
-    let title = pattern.captures(&body)?.get(1)?.as_str();
-    Some(title.to_string().clone())
+async fn get_title(url: &String) -> String {
+    let Ok(res) = reqwest::get(url).await else {
+        return "".to_string();
+    };
+    let Ok(body) = res.text().await else {
+        return "".to_string();
+    };
+    let regex = Regex::new("<title>(.*)</title>").unwrap();
+    if let Some(caps) = regex.captures(&body) {
+        return caps[1].to_string().clone();
+    }
+    return "".to_string();
+}
+
+#[tokio::main]
+async fn get_ogp_info(url: &String) -> (String, String, String, String) {
+    let mut title = "".to_string();
+    let mut image = "".to_string();
+    let mut description = "".to_string();
+    let mut site_name = "".to_string();
+
+    let Ok(res) = reqwest::get(url).await else {
+        return (title, image, description, site_name);
+    };
+    let Ok(body) = res.text().await else {
+        return (title, image, description, site_name);
+    };
+
+    let regex = Regex::new("property=\"og:([^\"]*)\" content=\"([^\"]*)\"").unwrap();
+    for caps in regex.captures_iter(&body) {
+        match &caps[1] {
+            "title" => { title = caps[2].to_string(); },
+            "image" => { image = caps[2].to_string(); },
+            "description" => { description = caps[2].to_string(); },
+            "site_name" => { site_name = caps[2].to_string(); },
+            _ => {},
+        }
+    }
+    (title, image, description, site_name)
 }

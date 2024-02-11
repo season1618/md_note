@@ -39,6 +39,7 @@ fn gen_content(dest: &mut File, content: &Vec<Block>, indent: usize) -> Result<(
             Header { spans, level, id } => { gen_header(spans, level, id, indent, dest)?; },
             Blockquote { spans } => { gen_blockquote(spans, indent, dest)?; },
             ListElement(list) => { gen_list(list, indent, dest)?; },
+            LinkCard { title, image, url, description, site_name } => { gen_link_card(title, image, url, description, site_name, indent, dest)?; },
             Table { head, body } => { gen_table(head, body, indent, dest)?; },
             Paragraph { spans } => { gen_paragraph(spans, indent, dest)?; },
             MathBlock { math } => { gen_math_block(math, indent, dest)?; },
@@ -77,6 +78,13 @@ fn gen_list(list: &List, indent: usize, dest: &mut File) -> Result<(), io::Error
         writeln!(dest, "{:>indent$}  </li>", " ")?;
     }
     writeln!(dest, "{:>indent$}</{}>", " ", if list.ordered { "ol" } else { "ul" })
+}
+
+fn gen_link_card(title: &String, image: &String, url: &String, description: &String, site_name: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
+    writeln!(dest, "{:>indent$}<div class=\"link-card\"><a href=\"{}\">", "", url)?;
+    writeln!(dest, "{:>indent$}  <div><h3>{}</h3><p>{}</p></div>", "", title, description)?;
+    writeln!(dest, "{:>indent$}  <img src=\"{}\">", "", image)?;
+    writeln!(dest, "{:>indent$}</a></div>", "")
 }
 
 fn gen_table(head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
