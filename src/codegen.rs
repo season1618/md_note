@@ -20,7 +20,7 @@ pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block
             Hour => { write!(dest, "{:02}", datetime.hour())?; },
             Minute => { write!(dest, "{:02}", datetime.minute())?; },
             Second => { write!(dest, "{:02}", datetime.second())?; },
-            Toc(indent) => { gen_toc(dest, title, toc, *indent)?; },
+            Toc(indent) => { gen_toc(dest, toc, *indent)?; },
             Content(indent) => { gen_content(dest, content, *indent)?; },
             Str(text) => { write!(dest, "{}", text)?; },
         }
@@ -28,8 +28,7 @@ pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block
     Ok(())
 }
 
-fn gen_toc(dest: &mut File, title: &String, toc: &List, indent: usize) -> Result<(), io::Error> {
-    writeln!(dest, "<h4>{}</h4>", title)?;
+fn gen_toc(dest: &mut File, toc: &List, indent: usize) -> Result<(), io::Error> {
     gen_list(&toc, indent, dest)
 }
 
