@@ -1,4 +1,5 @@
 pub mod data;
+pub mod multiset;
 pub mod parser;
 pub mod template;
 pub mod codegen;

@@ -3,6 +3,7 @@ use regex::Regex;
 use reqwest::{self, header};
 
 use crate::data::*;
+use crate::multiset::MultiSet;
 use Block::*;
 use Span::*;
 use EmphasisKind::*;
@@ -16,6 +17,7 @@ pub fn parse_markdown(doc: &String) -> (String, List, Vec<Block>) {
 pub struct Parser {
     doc: Vec<char>,
     pos: usize,
+    headers: MultiSet<String>,
     title: String,
     toc: List,
     content: Vec<Block>,
@@ -26,7 +28,8 @@ impl Parser {
         Parser {
             doc: doc.chars().collect(),
             pos: 0,
-            title: "".to_string(),
+            headers: MultiSet::new(),
+            title: String::new(),
             toc: List { ordered: true, items: Vec::new() },
             content: Vec::new(),
         }
@@ -101,30 +104,32 @@ impl Parser {
 
     fn parse_header(&mut self, level: u32) -> Block {
         let spans = self.parse_spans();
-        let mut id = "".to_string();
+        let mut header = "".to_string();
         for span in &spans {
             match span {
-                Link { text, .. } => { id.push_str(text); },
-                Emphasis { text, .. } => { id.push_str(text); },
-                Math { math } => { id.push_str(&format!("\\({}\\)", math)) },
-                Code { code } => { id.push_str(code); },
-                Text { text } => { id.push_str(text); },
+                Link { text, .. } => { header.push_str(text); },
+                Emphasis { text, .. } => { header.push_str(text); },
+                Math { math } => { header.push_str(&format!("\\({}\\)", math)) },
+                Code { code } => { header.push_str(code); },
+                Text { text } => { header.push_str(text); },
                 _ => {},
             }
         }
 
+        let count = self.headers.insert(header.clone());
+        let id = if count == 0 { format!("{}", &header) } else { format!("{}-{}", &header, count) };
+        let href = format!("#{}", &id);
+
         // modify title or table of contents
         if level == 1 {
-            self.title = id.clone();
+            self.title = header.clone();
         } else {
-            let url = format!("#{}", id);
-
             let mut cur = &mut self.toc;
             for _ in 2..level {
                 cur = &mut cur.items.last_mut().unwrap().list;
             }
             cur.items.push(ListItem {
-                spans: vec![ Link { text: id.clone(), url }],
+                spans: vec![ Link { text: header.clone(), url: href.clone() }],
                 list: List { ordered: true, items: Vec::new() },
             });
         }
