@@ -1,6 +1,6 @@
 use tokio;
 use regex::Regex;
-use reqwest;
+use reqwest::{self, header};
 
 use crate::data::*;
 use Block::*;
@@ -477,7 +477,8 @@ impl Parser {
 
 #[tokio::main]
 async fn get_title(url: &String) -> String {
-    let Ok(res) = reqwest::get(url).await else {
+    let client = reqwest::Client::new();
+    let Ok(res) = client.get(url).header(header::ACCEPT, header::HeaderValue::from_str("text/html").unwrap()).send().await else {
         return "".to_string();
     };
     let Ok(body) = res.text().await else {
@@ -497,7 +498,8 @@ async fn get_ogp_info(url: &String) -> (String, Option<String>, Option<String>, 
     let mut description = None;
     let mut site_name = None;
 
-    let Ok(res) = reqwest::get(url).await else {
+    let client = reqwest::Client::new();
+    let Ok(res) = client.get(url).header(header::ACCEPT, header::HeaderValue::from_str("text/html").unwrap()).send().await else {
         return (title, image, description, site_name);
     };
     let Ok(body) = res.text().await else {
