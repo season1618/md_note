@@ -265,21 +265,21 @@ impl Parser {
 
             // strong
             if self.expect("**") {
-                spans.push(self.parse_strong("**"));
+                spans.push(self.parse_strong('*'));
                 continue;
             }
             if self.expect("__") {
-                spans.push(self.parse_strong("__"));
+                spans.push(self.parse_strong('_'));
                 continue;
             }
 
             // emphasis
             if self.expect("*") {
-                spans.push(self.parse_emphasis("*"));
+                spans.push(self.parse_emphasis('*'));
                 continue;
             }
             if self.expect("_") {
-                spans.push(self.parse_emphasis("_"));
+                spans.push(self.parse_emphasis('_'));
                 continue;
             }
 
@@ -335,28 +335,37 @@ impl Parser {
         Link { text, url }
     }
 
-    fn parse_strong(&mut self, ind: &str) -> Span {
-        let mut text = "".to_string();
-        while let Some(c) = self.next_char_line_term(ind) {
-            if c == '\n' {
-                return Text { text: format!("{}{}", ind.to_string(), text) };
+    fn parse_strong(&mut self, d: char) -> Span {
+        let mut text = String::new();
+        let mut i = 0;
+        while let Some(c) = self.next_char_line(i) {
+            if c == d {
+                if Some(d) == self.next_char_line(i + 1) {
+                    self.pos += i + 2;
+                    return Strong { text };
+                } else {
+                    self.pos += i + 1;
+                    return Emphasis { text };
+                }
             }
+            i += 1;
             text.push_str(&self.escape(c));
         }
-
-        Strong { text }
+        Text { text: format!("{0}{0}", d) }
     }
 
-    fn parse_emphasis(&mut self, ind: &str) -> Span {
-        let mut text = "".to_string();
-        while let Some(c) = self.next_char_line_term(ind) {
-            if c == '\n' {
-                return Text { text: format!("{}{}", ind.to_string(), text) };
+    fn parse_emphasis(&mut self, d: char) -> Span {
+        let mut text = String::new();
+        let mut i = 0;
+        while let Some(c) = self.next_char_line(i) {
+            if c == d {
+                self.pos += i + 1;
+                return Emphasis { text };
             }
+            i += 1;
             text.push_str(&self.escape(c));
         }
-
-        Emphasis { text }
+        Text { text: d.to_string() }
     }
 
     fn parse_math(&mut self) -> Span {
