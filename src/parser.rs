@@ -425,7 +425,7 @@ impl Parser {
 
     fn expect(&mut self, s: &str) -> bool {
         let cs: Vec<char> = s.chars().collect();
-        if self.pos + cs.len() <= self.doc.len() && self.doc[self.pos .. self.pos + cs.len()] == cs {
+        if self.doc[self.pos ..].starts_with(&cs) {
             self.pos += cs.len();
             return true;
         }
@@ -434,15 +434,16 @@ impl Parser {
 
     fn next_char(&mut self) -> Option<char> {
         if self.pos < self.doc.len() {
+            let c = self.doc[self.pos];
             self.pos += 1;
-            return Some(self.doc[self.pos - 1]);
+            return Some(c);
         }
         None
     }
 
     fn next_char_term(&mut self, term: &str) -> Option<char> {
         let terms: Vec<char> = term.chars().collect();
-        if self.pos + terms.len() <= self.doc.len() && self.doc[self.pos .. self.pos + terms.len()] == terms {
+        if self.doc[self.pos ..].starts_with(&terms) {
             self.pos += terms.len();
             return None;
         }
@@ -456,7 +457,7 @@ impl Parser {
 
     fn next_char_line_term(&mut self, term: &str) -> Option<char> {
         let terms: Vec<char> = term.chars().collect();
-        if self.pos + terms.len() <= self.doc.len() && self.doc[self.pos .. self.pos + terms.len()] == terms {
+        if self.doc[self.pos ..].starts_with(&terms) {
             self.pos += terms.len();
             return None;
         }
