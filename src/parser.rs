@@ -351,36 +351,45 @@ impl Parser {
     }
 
     fn parse_math(&mut self) -> Span {
-        let mut math = "".to_string();
-        while let Some(c) = self.next_char_line_term("$") {
-            if c == '\n' {
-                return Text { text: format!("${}", math) };
+        let mut math = String::new();
+        let mut i = 0;
+        while let Some(c) = self.next_char_line(i) {
+            if c == '$' {
+                self.pos += i + 1;
+                return Math { math };
             }
+            i += 1;
             math.push_str(&self.escape(c));
         }
-        Math { math }
+        Text { text: "$".to_string() }
     }
 
     fn parse_code(&mut self) -> Span {
-        let mut code = "".to_string();
-        while let Some(c) = self.next_char_line_term("`") {
-            if c == '\n' {
-                return Text { text: format!("`{}", code) };
+        let mut code = String::new();
+        let mut i = 0;
+        while let Some(c) = self.next_char_line(i) {
+            if c == '`' {
+                self.pos += i + 1;
+                return Code { code };
             }
+            i += 1;
             code.push_str(&self.escape(c));
         }
-        Code { code }
+        Text { text: "`".to_string() }
     }
 
     fn parse_image(&mut self) -> Span {
-        let mut url = "".to_string();
-        while let Some(c) = self.next_char_line_term(")") {
-            if c == '\n' {
-                return Text { text: format!("![]({}", url) };
+        let mut url = String::new();
+        let mut i = 0;
+        while let Some(c) = self.next_char_line(i) {
+            if c == ')' {
+                self.pos += i + 1;
+                return Image { url };
             }
+            i += 1;
             url.push(c);
         }
-        Image { url }
+        Text { text: "![](".to_string() }
     }
 
     fn parse_text(&mut self) -> Span {
@@ -393,8 +402,8 @@ impl Parser {
             if c == '[' || c == '$' || c == '`' || c == '*' || c == '_' {
                 break;
             }
-            text.push_str(&self.escape(c));
             self.pos += 1;
+            text.push_str(&self.escape(c));
         }
         Text { text }
     }
@@ -453,6 +462,14 @@ impl Parser {
             return Some(c);
         }
         None
+    }
+
+    fn next_char_line(&mut self, index: usize) -> Option<char> {
+        let chs = &self.doc[self.pos + index..];
+        if chs.starts_with(&['\n']) || chs.starts_with(&['\r', '\n']) {
+            return None;
+        }
+        Some(chs[0])
     }
 
     fn next_char_line_term(&mut self, term: &str) -> Option<char> {
