@@ -6,7 +6,6 @@ use crate::data::*;
 use crate::multiset::MultiSet;
 use Block::*;
 use Span::*;
-use EmphasisKind::*;
 
 pub fn parse_markdown(doc: &String) -> (String, List, Vec<Block>) {
     let mut parser = Parser::new(doc);
@@ -264,15 +263,17 @@ impl Parser {
                 continue;
             }
 
-            // emphasis
+            // strong
             if self.expect("**") {
-                spans.push(self.parse_emphasis("**"));
+                spans.push(self.parse_strong("**"));
                 continue;
             }
             if self.expect("__") {
-                spans.push(self.parse_emphasis("__"));
+                spans.push(self.parse_strong("__"));
                 continue;
             }
+
+            // emphasis
             if self.expect("*") {
                 spans.push(self.parse_emphasis("*"));
                 continue;
@@ -334,6 +335,18 @@ impl Parser {
         Link { text, url }
     }
 
+    fn parse_strong(&mut self, ind: &str) -> Span {
+        let mut text = "".to_string();
+        while let Some(c) = self.next_char_line_term(ind) {
+            if c == '\n' {
+                return Text { text: format!("{}{}", ind.to_string(), text) };
+            }
+            text.push_str(&self.escape(c));
+        }
+
+        Strong { text }
+    }
+
     fn parse_emphasis(&mut self, ind: &str) -> Span {
         let mut text = "".to_string();
         while let Some(c) = self.next_char_line_term(ind) {
@@ -343,11 +356,7 @@ impl Parser {
             text.push_str(&self.escape(c));
         }
 
-        if ind == "*" || ind == "_" {
-            return Emphasis { kind: Em, text };
-        } else {
-            return Emphasis { kind: Strong, text };
-        }
+        Emphasis { text }
     }
 
     fn parse_math(&mut self) -> Span {

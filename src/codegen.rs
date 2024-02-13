@@ -6,7 +6,6 @@ use crate::data::*;
 
 use Block::*;
 use Span::*;
-use EmphasisKind::*;
 use Elem::*;
 
 pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block>, template: &Vec<Elem>) -> Result<(), io::Error> {
@@ -140,7 +139,8 @@ fn gen_spans(spans: &Vec<Span>, dest: &mut File) -> Result<(), io::Error> {
     for span in spans {
         match span {
             Link { text, url } => { gen_link(text, url, dest)?; },
-            Emphasis { kind, text } => { gen_emphasis(kind, text, dest)?; },
+            Emphasis { text } => { gen_emphasis(text, dest)?; },
+            Strong { text } => { gen_strong(text, dest)?; },
             Math { math } => { gen_math(math, dest)?; },
             Code { code } => { gen_code(code, dest)?; },
             Image { url } => { gen_image(url, dest)?; },
@@ -154,11 +154,12 @@ fn gen_link(text: &String, url: &String, dest: &mut File) -> Result<(), io::Erro
     write!(dest, "<a href=\"{}\">{}</a>", *url, *text)
 }
 
-fn gen_emphasis(kind: &EmphasisKind, text: &String, dest: &mut File) -> Result<(), io::Error> {
-    match *kind {
-        Em => { write!(dest, "<em>{}</em>", *text) },
-        Strong => { write!(dest, "<strong>{}</strong>", *text) },
-    }
+fn gen_emphasis(text: &String, dest: &mut File) -> Result<(), io::Error> {
+    write!(dest, "<em>{}</em>", *text)
+}
+
+fn gen_strong(text: &String, dest: &mut File) -> Result<(), io::Error> {
+    write!(dest, "<strong>{}</strong>", *text)
 }
 
 fn gen_math(math: &String, dest: &mut File) -> Result<(), io::Error> {

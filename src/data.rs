@@ -13,7 +13,8 @@ pub enum Block {
 #[derive(Clone, Debug)]
 pub enum Span {
     Link { text: String, url: String },
-    Emphasis { kind: EmphasisKind, text: String },
+    Emphasis { text: String },
+    Strong { text: String },
     Math { math: String },
     Code { code: String },
     Image { url: String },
@@ -30,12 +31,6 @@ pub struct List {
 pub struct ListItem {
     pub spans: Vec<Span>,
     pub list: List,
-}
-
-#[derive(Clone, Debug)]
-pub enum EmphasisKind {
-    Em,
-    Strong,
 }
 
 #[derive(Debug)]
