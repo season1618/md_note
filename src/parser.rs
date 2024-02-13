@@ -390,7 +390,7 @@ impl Parser {
             if c == '\n' || c == '\r' {
                 break;
             }
-            if c == '[' || c == '`' || c == '*' || c == '_' {
+            if c == '[' || c == '$' || c == '`' || c == '*' || c == '_' {
                 break;
             }
             text.push_str(&self.escape(c));
@@ -462,8 +462,12 @@ impl Parser {
             return None;
         }
         if self.pos < self.doc.len() {
-            let c = self.doc[self.pos];
-            if c != '\n' && c != '\r' {
+            let mut c = self.doc[self.pos];
+            if c == '\r' {
+                self.pos += 1;
+                c = self.doc[self.pos];
+            }
+            if c != '\n' {
                 self.pos += 1;
             }
             return Some(c);
