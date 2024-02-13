@@ -74,7 +74,7 @@ impl Parser {
         }
 
         // list
-        if c == '*' || c == '+' || c == '-' || self.match_numbers_period_space() {
+        if c == '*' || c == '+' || c == '-' || self.starts_with_number_period_space() {
             return ListElement(self.parse_list(0));
         }
 
@@ -164,7 +164,7 @@ impl Parser {
                     continue;
                 }
 
-                if self.expect_numbers_period_space() {
+                if self.expect_number_period_space() {
                     ordered = true;
                     items.push(ListItem {
                         spans: self.parse_spans(),
@@ -399,29 +399,28 @@ impl Parser {
         Text { text }
     }
 
-    fn match_numbers_period_space(&mut self) -> bool {
+    fn starts_with_number_period_space(&self) -> bool {
+        let chs = &self.doc[self.pos ..];
         let mut i = 0;
-        while self.pos + i < self.doc.len() && self.doc[self.pos + i].is_ascii_digit() {
+        for c in chs {
+            if !c.is_ascii_digit() { break; }
             i += 1;
         }
-        if i > 0 && self.doc[self.pos + i] == '.' && self.doc[self.pos + i + 1] == ' ' {
-            return true;
-        } else {
-            return false;
-        }
+        i > 0 && chs[i..].starts_with(&['.', ' '])
     }
 
-    fn expect_numbers_period_space(&mut self) -> bool {
+    fn expect_number_period_space(&mut self) -> bool {
+        let chs = &self.doc[self.pos ..];
         let mut i = 0;
-        while self.pos + i < self.doc.len() && self.doc[self.pos + i].is_ascii_digit() {
+        for c in chs {
+            if !c.is_ascii_digit() { break; }
             i += 1;
         }
-        if i > 0 && self.doc[self.pos + i] == '.' && self.doc[self.pos + i + 1] == ' ' {
+        if i > 0 && chs[i..].starts_with(&['.', ' ']) {
             self.pos += i + 2;
             return true;
-        } else {
-            return false;
         }
+        false
     }
 
     fn expect(&mut self, s: &str) -> bool {
