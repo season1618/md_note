@@ -45,8 +45,6 @@ impl Parser {
     }
 
     fn parse_block(&mut self) -> Block {
-        let c = self.doc[self.pos];
-
         // header
         if self.expect("# ") {
             return self.parse_header(1);
@@ -73,7 +71,7 @@ impl Parser {
         }
 
         // list
-        if c == '*' || c == '+' || c == '-' || self.starts_with_number_period_space() {
+        if self.starts_with("+ ") || self.starts_with("- ") || self.starts_with("* ") || self.starts_with_number_period_space() {
             return ListElement(self.parse_list(0));
         }
 
@@ -83,7 +81,7 @@ impl Parser {
         }
 
         // table
-        if c == '|' {
+        if self.starts_with("|") {
             return self.parse_table();
         }
 
@@ -151,9 +149,7 @@ impl Parser {
             if min_indent <= indent {
                 self.pos += indent;
 
-                let c1 = self.doc[self.pos];
-                let c2 = self.doc[self.pos + 1];
-                if (c1 == '*' || c1 == '+' || c1 == '-') && c2 == ' ' {
+                if self.starts_with("+ ") || self.starts_with("- ") || self.starts_with("* ") {
                     self.pos += 2;
                     ordered = false;
                     items.push(ListItem {
@@ -424,6 +420,11 @@ impl Parser {
             text.push_str(&self.escape(c));
         }
         Text { text }
+    }
+
+    fn starts_with(&self, s: &str) -> bool {
+        let cs: Vec<char> = s.chars().collect();
+        self.doc[self.pos ..].starts_with(&cs)
     }
 
     fn starts_with_number_period_space(&self) -> bool {
