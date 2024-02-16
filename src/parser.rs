@@ -195,7 +195,7 @@ impl<'a> Parser<'a> {
 
     fn parse_code_block(&mut self) -> Block {
         let mut lang = String::new();
-        while let Some(c) = self.next_char_until("\n") {
+        while let Some(c) = self.next_char_until_newline() {
             lang.push(c);
         }
         let mut code = String::new();
@@ -415,6 +415,23 @@ impl<'a> Parser<'a> {
         if self.chs.starts_with(until) {
             let len = until.chars().count();
             self.chs = &self.chs[len..];
+            return None;
+        }
+        if let Some(c) = self.chs.chars().nth(0) {
+            let i = if let Some((i, _)) = self.chs.char_indices().nth(1) { i } else { self.chs.len() };
+            self.chs = &self.chs[i..];
+            return Some(c);
+        }
+        None
+    }
+
+    fn next_char_until_newline(&mut self) -> Option<char> {
+        if self.chs.starts_with("\n") {
+            self.chs = &self.chs[1..];
+            return None;
+        }
+        if self.chs.starts_with("\r\n") {
+            self.chs = &self.chs[2..];
             return None;
         }
         if let Some(c) = self.chs.chars().nth(0) {
