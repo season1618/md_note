@@ -53,6 +53,11 @@ impl<'a> Parser<'a> {
             return self.parse_code_block();
         }
 
+        // table
+        if self.chs.starts_with("|") {
+            return self.parse_table();
+        }
+
         // paragraph
         return self.parse_paragraph();
     }
@@ -75,6 +80,38 @@ impl<'a> Parser<'a> {
             code.push_str(&self.escape(c));
         }
         CodeBlock { lang, code }
+    }
+
+    fn parse_table(&mut self) -> Block {
+        let mut head = Vec::new();
+        let mut body = Vec::new();
+        while let Some(row) = self.parse_table_row() {
+            head.push(row);
+        }
+        while let Some(row) = self.parse_table_row() {
+            body.push(row);
+        }
+        Table { head, body }
+    }
+
+    fn parse_table_row(&mut self) -> Option<Vec<String>> {
+        if !self.next_str("|") {
+            return None;
+        }
+
+        let mut row: Vec<String> = Vec::new();
+        while !self.chs.is_empty() && !self.next_newline() {
+            let mut data = String::new();
+            while let Some(c) = self.next_char_except("|\r\n") {
+                data.push_str(&self.escape(c));
+            }
+            row.push(data);
+            self.next_str("|");
+        }
+        if row.iter().all(|s| s.chars().all(|c| c == '-' || c == ' ')) {
+            return None;
+        }
+        Some(row)
     }
 
     fn parse_paragraph(&mut self) -> Block {
@@ -265,6 +302,23 @@ impl<'a> Parser<'a> {
         None
     }
 
+    fn next_char_until_newline(&mut self, until: &str) -> Option<char> {
+        if self.chs.starts_with("\n") {
+            self.chs = &self.chs[1..];
+            return None;
+        }
+        if self.chs.starts_with("\r\n") {
+            self.chs = &self.chs[2..];
+            return None;
+        }
+        if let Some(c) = self.chs.chars().nth(0) {
+            let i = if let Some((i, _)) = self.chs.char_indices().nth(1) { i } else { self.chs.len() };
+            self.chs = &self.chs[i..];
+            return Some(c);
+        }
+        None
+    }
+
     fn next_char_except(&mut self, except: &str) -> Option<char> {
         if let Some(c) = self.chs.chars().nth(0) {
             if !except.contains(c) {
@@ -276,6 +330,15 @@ impl<'a> Parser<'a> {
         None
     }
 
+    fn next_str(&mut self, chs: &str) -> bool {
+        if self.chs.starts_with(chs) {
+            let len = chs.chars().count();
+            self.chs = &self.chs[len..];
+            return true;
+        }
+        false
+    }
+
     fn next_newline(&mut self) -> bool {
         if self.chs.starts_with("\n") {
             self.chs = &self.chs[1..];
@@ -283,15 +346,6 @@ impl<'a> Parser<'a> {
         }
         if self.chs.starts_with("\r\n") {
             self.chs = &self.chs[2..];
-            return true;
-        }
-        false
-    }
-
-    fn next_str(&mut self, chs: &str) -> bool {
-        if self.chs.starts_with(chs) {
-            let len = chs.chars().count();
-            self.chs = &self.chs[len..];
             return true;
         }
         false
