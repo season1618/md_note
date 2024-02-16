@@ -43,6 +43,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block(&mut self) -> Block {
+        // link card
+        if self.starts_with_next("?[](") {
+            return self.parse_link_card();
+        }
+
         // math block
         if self.starts_with_next("$$") {
             return self.parse_math_block();
@@ -60,6 +65,15 @@ impl<'a> Parser<'a> {
 
         // paragraph
         return self.parse_paragraph();
+    }
+
+    fn parse_link_card(&mut self) -> Block {
+        let mut url = String::new();
+        while let Some(c) = self.next_char_until(")") {
+            url.push(c);
+        }
+        let (title, image, description, site_name) = get_ogp_info(&url);
+        LinkCard { title, image, url, description, site_name }
     }
 
     fn parse_math_block(&mut self) -> Block {
@@ -371,4 +385,40 @@ async fn get_title(url: &String) -> String {
         return caps[1].to_string().clone();
     }
     return "".to_string();
+}
+
+#[tokio::main]
+async fn get_ogp_info(url: &String) -> (String, Option<String>, Option<String>, Option<String>) {
+    let mut title = "".to_string();
+    let mut image = None;
+    let mut description = None;
+    let mut site_name = None;
+
+    let client = reqwest::Client::new();
+    let Ok(res) = client.get(url).header(header::ACCEPT, header::HeaderValue::from_str("text/html").unwrap()).send().await else {
+        return (title, image, description, site_name);
+    };
+    let Ok(body) = res.text().await else {
+        return (title, image, description, site_name);
+    };
+
+    let regex = Regex::new("property=\"og:([^\"]*)\" content=\"([^\"]*)\"").unwrap();
+    for caps in regex.captures_iter(&body) {
+        match &caps[1] {
+            "title" => { title = caps[2].to_string(); },
+            "image" => { image = Some(caps[2].to_string()); },
+            "description" => { description = Some(caps[2].to_string()); },
+            "site_name" => { site_name = Some(caps[2].to_string()); },
+            _ => {},
+        }
+    }
+
+    if title.is_empty() {
+        let regex = Regex::new("<title>(.*)</title>").unwrap();
+        if let Some(caps) = regex.captures(&body) {
+            title = caps[1].to_string();
+        }
+    }
+
+    (title, image, description, site_name)
 }
