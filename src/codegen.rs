@@ -28,10 +28,12 @@ pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block
 }
 
 fn gen_toc(dest: &mut File, toc: &List, indent: usize) -> Result<(), io::Error> {
+    writeln!(dest)?;
     gen_list(&toc, indent, dest)
 }
 
 fn gen_content(dest: &mut File, content: &Vec<Block>, indent: usize) -> Result<(), io::Error> {
+    writeln!(dest)?;
     for block in content {
         match block {
             Header { spans, level, id } => { gen_header(spans, level, id, indent, dest)?; },
