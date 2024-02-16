@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
         }
 
         // blockquote
-        if self.starts_with_next("> ") {
+        if self.chs.starts_with("> ") {
             return self.parse_blockquote();
         }
 
@@ -132,7 +132,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_blockquote(&mut self) -> Block {
-        Blockquote { spans: self.parse_spans() }
+        let mut lines = Vec::new();
+        while self.starts_with_next("> ") {
+            lines.push(self.parse_spans());
+        }
+        Blockquote { lines }
     }
 
     fn parse_list(&mut self, min_indent: usize) -> List {

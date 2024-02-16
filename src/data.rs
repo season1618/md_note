@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub enum Block {
     Header { spans: Vec<Span>, level: u32, id: String },
-    Blockquote { spans: Vec<Span> },
+    Blockquote { lines: Vec<Vec<Span>> },
     ListElement(List),
     LinkCard { title: String, image: Option<String>, url: String, description: Option<String>, site_name: Option<String> },
     MathBlock { math: String },

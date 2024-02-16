@@ -35,7 +35,7 @@ fn gen_content(dest: &mut File, content: &Vec<Block>, indent: usize) -> Result<(
     for block in content {
         match block {
             Header { spans, level, id } => { gen_header(spans, level, id, indent, dest)?; },
-            Blockquote { spans } => { gen_blockquote(spans, indent, dest)?; },
+            Blockquote { lines } => { gen_blockquote(lines, indent, dest)?; },
             ListElement(list) => { gen_list(list, indent, dest)?; },
             LinkCard { title, image, url, description, site_name } => { gen_link_card(title, image, url, description, site_name, indent, dest)?; },
             Table { head, body } => { gen_table(head, body, indent, dest)?; },
@@ -53,10 +53,14 @@ fn gen_header(spans: &Vec<Span>, level: &u32, id: &String, indent: usize, dest: 
     writeln!(dest, "</h{}>", *level)
 }
 
-fn gen_blockquote(spans: &Vec<Span>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "{:>indent$}<blockquote>", " ")?;
-    gen_spans(spans, dest)?;
-    writeln!(dest, "</blockquote>")
+fn gen_blockquote(lines: &Vec<Vec<Span>>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
+    writeln!(dest, "{:>indent$}<blockquote>", " ")?;
+    for spans in lines {
+        write!(dest, "{:>indent$}  <p>", " ")?;
+        gen_spans(spans, dest)?;
+        writeln!(dest, "</p>")?;
+    }
+    writeln!(dest, "{:>indent$}</blockquote>", " ")
 }
 
 fn gen_list(list: &List, indent: usize, dest: &mut File) -> Result<(), io::Error> {
