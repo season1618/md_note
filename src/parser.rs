@@ -43,6 +43,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block(&mut self) -> Block {
+        // list
+        if self.chs.starts_with("+ ") || self.chs.starts_with("- ") || self.chs.starts_with("* ") || self.starts_with_num() {
+            return ListElement(self.parse_list(0));
+        }
+
         // link card
         if self.starts_with_next("?[](") {
             return self.parse_link_card();
@@ -65,6 +70,47 @@ impl<'a> Parser<'a> {
 
         // paragraph
         return self.parse_paragraph();
+    }
+
+    fn parse_list(&mut self, min_indent: usize) -> List {
+        let mut ordered = false;
+        let mut items = Vec::new();
+        while !self.chs.is_empty() {
+            let mut indent = 0;
+            let mut chs = self.chs;
+            while let Some((c, rest)) = uncons(chs) {
+                if c == ' ' {
+                    chs = rest;
+                    indent += 1;
+                } else {
+                    break;
+                }
+            }
+
+            if min_indent <= indent {
+                self.chs = chs;
+
+                if self.starts_with_next("+ ") || self.starts_with_next("- ") || self.starts_with_next("* ") {
+                    ordered = false;
+                    items.push(ListItem {
+                        spans: self.parse_spans(),
+                        list: self.parse_list(indent + 1),
+                    });
+                    continue;
+                }
+
+                if self.starts_with_num_next() {
+                    ordered = true;
+                    items.push(ListItem {
+                        spans: self.parse_spans(),
+                        list: self.parse_list(indent + 1),
+                    });
+                    continue;
+                }
+            }
+            break;
+        }
+        List { ordered, items }
     }
 
     fn parse_link_card(&mut self) -> Block {
@@ -327,6 +373,41 @@ impl<'a> Parser<'a> {
         None
     }
 
+    fn starts_with_num(&self) -> bool {
+        let mut chs = self.chs;
+        let mut i = 0;
+        while let Some((c, rest)) = uncons(chs) {
+            if c.is_ascii_digit() {
+                chs = rest;
+                i += 1;
+                continue;
+            }
+            if i > 0 && c == '.' && rest.starts_with(" ") {
+                return true;
+            }
+            break;
+        }
+        false
+    }
+
+    fn starts_with_num_next(&mut self) -> bool {
+        let mut chs = self.chs;
+        let mut i = 0;
+        while let Some((c, rest)) = uncons(chs) {
+            if c.is_ascii_digit() {
+                chs = rest;
+                i += 1;
+                continue;
+            }
+            if i > 0 && c == '.' && rest.starts_with(" ") {
+                self.chs = uncons(rest).unwrap().1;
+                return true;
+            }
+            break;
+        }
+        false
+    }
+
     fn starts_with_next(&mut self, chs: &str) -> bool {
         if self.chs.starts_with(chs) {
             let len = chs.chars().count();
@@ -355,6 +436,14 @@ impl<'a> Parser<'a> {
             _ => c.to_string(),
         }
     }
+}
+
+fn uncons<'a>(chs: &'a str) -> Option<(char, &'a str)> {
+    if let Some(c) = chs.chars().nth(0) {
+        let i = if let Some((i, _)) = chs.char_indices().nth(1) { i } else { chs.len() };
+        return Some((c, &chs[i..]));
+    }
+    None
 }
 
 fn uncons_except<'a>(chs: &'a str, except: &str) -> Option<(char, &'a str)> {
