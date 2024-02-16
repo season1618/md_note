@@ -43,6 +43,26 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block(&mut self) -> Block {
+        // header
+        if self.starts_with_next("# ") {
+            return self.parse_header(1);
+        }
+        if self.starts_with_next("## ") {
+            return self.parse_header(2);
+        }
+        if self.starts_with_next("### ") {
+            return self.parse_header(3);
+        }
+        if self.starts_with_next("#### ") {
+            return self.parse_header(4);
+        }
+        if self.starts_with_next("##### ") {
+            return self.parse_header(5);
+        }
+        if self.starts_with_next("###### ") {
+            return self.parse_header(6);
+        }
+
         // blockquote
         if self.starts_with_next("> ") {
             return self.parse_blockquote();
@@ -75,6 +95,40 @@ impl<'a> Parser<'a> {
 
         // paragraph
         return self.parse_paragraph();
+    }
+
+    fn parse_header(&mut self, level: u32) -> Block {
+        let spans = self.parse_spans();
+        let mut header = String::new();
+        for span in &spans {
+            match span {
+                Link { text, .. } => { header.push_str(text); },
+                Emphasis { text, .. } => { header.push_str(text); },
+                Math { math } => { header.push_str(&format!("\\({}\\)", math)) },
+                Code { code } => { header.push_str(code); },
+                Text { text } => { header.push_str(text); },
+                _ => {},
+            }
+        }
+
+        let count = self.headers.insert(header.clone());
+        let id = if count == 0 { format!("{}", &header) } else { format!("{}-{}", &header, count) };
+        let href = format!("#{}", &id);
+
+        // modify title or table of contents
+        if level == 1 {
+            self.title = header.clone();
+        } else {
+            let mut cur = &mut self.toc;
+            for _ in 2..level {
+                cur = &mut cur.items.last_mut().unwrap().list;
+            }
+            cur.items.push(ListItem {
+                spans: vec![ Link { text: header.clone(), url: href.clone() }],
+                list: List { ordered: true, items: Vec::new() },
+            });
+        }
+        Header { spans, level, id }
     }
 
     fn parse_blockquote(&mut self) -> Block {
