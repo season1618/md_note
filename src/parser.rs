@@ -304,25 +304,32 @@ impl Parser {
     }
 
     fn parse_link(&mut self) -> Span {
-        let mut text = "".to_string();
-        while let Some(c) = self.next_char_line_term("]") {
-            if c == '\n' {
-                return Text { text: format!("[{}", text) };
+        let mut text = String::new();
+        let mut url = String::new();
+        let mut i = 0;
+
+        loop {
+            match self.next_char_line(i) {
+                Some(']') => { i += 1; break; },
+                Some(c) => { i += 1; text.push_str(&self.escape(c)); },
+                None => { return Text { text: "[".to_string() }; },
             }
-            text.push_str(&self.escape(c));
         }
 
-        if !self.expect("(") {
-            return Text { text };
+        if Some('(') != self.next_char_line(i) {
+            return Text { text: "[".to_string() };
+        }
+        i += 1;
+
+        loop {
+            match self.next_char_line(i) {
+                Some(')') => { i += 1; break; },
+                Some(c) => { i += 1; url.push(c); },
+                None => { return Text { text: "[".to_string() }; },
+            }
         }
 
-        let mut url = "".to_string();
-        while let Some(c) = self.next_char_line_term(")") {
-            if c == '\n' {
-                return Text { text: format!("[{}]({}", text, url) };
-            }
-            url.push(c);
-        }
+        self.pos += i;
 
         if text.is_empty() {
             text = get_title(&url);
@@ -489,26 +496,6 @@ impl Parser {
             return None;
         }
         Some(chs[0])
-    }
-
-    fn next_char_line_term(&mut self, term: &str) -> Option<char> {
-        let terms: Vec<char> = term.chars().collect();
-        if self.doc[self.pos ..].starts_with(&terms) {
-            self.pos += terms.len();
-            return None;
-        }
-        if self.pos < self.doc.len() {
-            let mut c = self.doc[self.pos];
-            if c == '\r' {
-                self.pos += 1;
-                c = self.doc[self.pos];
-            }
-            if c != '\n' {
-                self.pos += 1;
-            }
-            return Some(c);
-        }
-        None
     }
 
     fn escape(&self, c: char) -> String {
