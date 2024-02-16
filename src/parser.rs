@@ -43,8 +43,38 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block(&mut self) -> Block {
+        // math block
+        if self.next_str("$$") {
+            return self.parse_math_block();
+        }
+
+        // code block
+        if self.next_str("```") {
+            return self.parse_code_block();
+        }
+
         // paragraph
         return self.parse_paragraph();
+    }
+
+    fn parse_math_block(&mut self) -> Block {
+        let mut math = String::new();
+        while let Some(c) = self.next_char_until("$$") {
+            math.push_str(&self.escape(c));
+        }
+        MathBlock { math }
+    }
+
+    fn parse_code_block(&mut self) -> Block {
+        let mut lang = String::new();
+        while let Some(c) = self.next_char_until("\n") {
+            lang.push(c);
+        }
+        let mut code = String::new();
+        while let Some(c) = self.next_char_until("```") {
+            code.push_str(&self.escape(c));
+        }
+        CodeBlock { lang, code }
     }
 
     fn parse_paragraph(&mut self) -> Block {
@@ -219,6 +249,20 @@ impl<'a> Parser<'a> {
             text.push_str(&self.escape(c));
         }
         Text { text }
+    }
+
+    fn next_char_until(&mut self, until: &str) -> Option<char> {
+        if self.chs.starts_with(until) {
+            let len = until.chars().count();
+            self.chs = &self.chs[len..];
+            return None;
+        }
+        if let Some(c) = self.chs.chars().nth(0) {
+            let i = if let Some((i, _)) = self.chs.char_indices().nth(1) { i } else { self.chs.len() };
+            self.chs = &self.chs[i..];
+            return Some(c);
+        }
+        None
     }
 
     fn next_char_except(&mut self, except: &str) -> Option<char> {
