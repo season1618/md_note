@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="./index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <title>MD Note</title>
+</head>
+<body>
+  <nav id="toc">
+    <h4>MD Note</h4>
+    
+    <ol>
+      <li>
+        <a href="#使い方">使い方</a>
+        <ol>
+          <li>
+            <a href="#属性">属性</a>
+          </li>
+          <li>
+            <a href="#テンプレートの例">テンプレートの例</a>
+          </li>
+        </ol>
+      </li>
+      <li>
+        <a href="#Markdown">Markdown</a>
+        <ol>
+          <li>
+            <a href="#リンク">リンク</a>
+          </li>
+          <li>
+            <a href="#リンクカード">リンクカード</a>
+          </li>
+          <li>
+            <a href="#画像">画像</a>
+          </li>
+          <li>
+            <a href="#引用">引用</a>
+          </li>
+          <li>
+            <a href="#リスト">リスト</a>
+          </li>
+          <li>
+            <a href="#強調">強調</a>
+          </li>
+          <li>
+            <a href="#数式">数式</a>
+          </li>
+          <li>
+            <a href="#コード">コード</a>
+          </li>
+          <li>
+            <a href="#表">表</a>
+          </li>
+        </ol>
+      </li>
+    </ol>
+
+  </nav>
+  <div id="content">
+    <p style="text-align: right;">最終更新: 2024/02/17 05:03:04</p>
+    
+    <h1 id="MD Note">MD Note</h1>
+    <p>Rust製markdown-to-htmlパーサ。</p>
+    <div class="linkcard"><a class="linkcard-link" href="https://github.com/season1618/md_note">
+      <div class="linkcard-text">
+        <h3 class="linkcard-title">GitHub - season1618/md_note: Markdown-to-HTML convertor</h3>
+        <p class="linkcard-description">Markdown-to-HTML convertor. Contribute to season1618/md_note development by creating an account on GitHub.</p>
+        <img  class="linkcard-favicon" src="http://www.google.com/s2/favicons?domain=https://github.com/season1618/md_note"><span  class="linkcard-sitename">GitHub</span>
+      </div>
+      <img class="linkcard-image" src="https://opengraph.githubassets.com/0e809f633f990a8b843cd5fbc72383119ff0396bb0503f6e05ff960b107cd201/season1618/md_note">
+    </a></div>
+    <h2 id="使い方">使い方</h2>
+    <p>Markdown文書、テンプレートHTML、出力ファイルを用意して実行。</p>
+    <pre><code class="language-plaintext">$ &lt;md_note&gt; &lt;source&gt;.md &lt;template&gt;.html &lt;destination&gt;.html
+</code></pre>
+    <h3 id="属性">属性</h3>
+    <p>md_noteはMarkdown文書から各種データを抽出しテンプレート中の<code>{属性名}</code>に埋め込む。利用可能なデータは以下の通り。</p>
+    <ul>
+      <li>
+        <code>title</code>: h1タグ<code>#</code>の見出しを文書のタイトルとして用いる。
+      </li>
+      <li>
+        <code>toc</code>: 文書中の見出しから目次を生成し番号付きリストとして表示。
+      </li>
+      <li>
+        <code>year</code>, <code>month</code>, <code>day</code>, <code>hour</code>, <code>minute</code>, <code>second</code>: Markdown文書をHTMLに変換した時刻。
+      </li>
+      <li>
+        <code>content</code>: 本文。
+      </li>
+    </ul>
+    <h3 id="テンプレートの例">テンプレートの例</h3>
+    <p>この文書のテンプレートを示す。</p>
+    <pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;link rel="stylesheet" href="./index.css"&gt;
+  &lt;!-- 省略 --&gt;
+  &lt;title&gt;{title}&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;nav id="toc"&gt;
+    &lt;h4&gt;{title}&lt;/h4&gt;
+    {toc}
+  &lt;/nav&gt;
+  &lt;div id="content"&gt;
+    &lt;p style="text-align: right;"&gt;最終更新: {year}/{month}/{day} {hour}:{minute}:{second}&lt;/p&gt;
+    {content}
+  &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+    <h2 id="Markdown">Markdown</h2>
+    <p>基本的には<a href="https://commonmark.org/help/">CommonMark</a>。</p>
+    <h3 id="リンク">リンク</h3>
+    <pre><code class="language-plaintext">[text](url)
+</code></pre>
+    <p><a href="https://github.com/season1618/md_note">MD Note</a></p>
+    <p>リンクテキストを省略するとそのURLのページの<code>&lt;title&gt;</code>を差し込む。</p>
+    <p><a href="https://github.com/season1618/md_note">GitHub - season1618/md_note: Markdown-to-HTML convertor</a></p>
+    <h3 id="リンクカード">リンクカード</h3>
+    <p>OGP情報を取得しリンクカードを生成する。</p>
+    <pre><code class="language-plaintext">?[](url)
+</code></pre>
+    <div class="linkcard"><a class="linkcard-link" href="https://github.com/season1618/md_note">
+      <div class="linkcard-text">
+        <h3 class="linkcard-title">GitHub - season1618/md_note: Markdown-to-HTML convertor</h3>
+        <p class="linkcard-description">Markdown-to-HTML convertor. Contribute to season1618/md_note development by creating an account on GitHub.</p>
+        <img  class="linkcard-favicon" src="http://www.google.com/s2/favicons?domain=https://github.com/season1618/md_note"><span  class="linkcard-sitename">GitHub</span>
+      </div>
+      <img class="linkcard-image" src="https://opengraph.githubassets.com/0e809f633f990a8b843cd5fbc72383119ff0396bb0503f6e05ff960b107cd201/season1618/md_note">
+    </a></div>
+    <h3 id="画像">画像</h3>
+    <pre><code class="language-plaintext">![](path)
+</code></pre>
+    <p><img src="./image.jpg"></p>
+    <h3 id="引用">引用</h3>
+    <blockquote>
+      <p>行頭に<code>&gt; </code>を付けることで引用となる。</p>
+      <p>隣接する行に付けると引用も連結される。</p>
+    </blockquote>
+    <h3 id="リスト">リスト</h3>
+    <ul>
+      <li>
+        番号なしリスト
+        <ul>
+          <li>
+            <code>-</code>
+          </li>
+          <li>
+            <code>+</code>
+          </li>
+          <li>
+            <code>*</code>
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <ol>
+      <li>
+        番号付きリスト
+        <ol>
+          <li>
+            <code>1.</code>
+          </li>
+          <li>
+            <code>2.</code>
+          </li>
+          <li>
+            <code>3.</code>
+          </li>
+          <li>
+            ...
+          </li>
+        </ol>
+      </li>
+    </ol>
+    <ul>
+      <li>
+        混合
+        <ol>
+          <li>
+            aaa
+            <ul>
+              <li>
+                AAA
+              </li>
+            </ul>
+          </li>
+          <li>
+            bbb
+            <ul>
+              <li>
+                BBB
+              </li>
+            </ul>
+          </li>
+          <li>
+            ccc
+            <ul>
+              <li>
+                CCC
+              </li>
+            </ul>
+          </li>
+        </ol>
+      </li>
+    </ul>
+    <h3 id="強調">強調</h3>
+    <ul>
+      <li>
+        <code>*Italic*</code>: <em>Italic</em>
+      </li>
+      <li>
+        <code>_Italic_</code>: <em>Italic</em>
+      </li>
+      <li>
+        <code>**Bold**</code>: <strong>Bold</strong>
+      </li>
+      <li>
+        <code>__Bold__</code>: <strong>Bold</strong>
+      </li>
+    </ul>
+    <h3 id="数式">数式</h3>
+    <p>HTMLの<code>&lt;head&gt;</code>に</p>
+    <pre><code class="language-html">&lt;script src="https://polyfill.io/v3/polyfill.min.js?features=es6"&gt;&lt;/script&gt;
+&lt;script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"&gt;&lt;/script&gt;
+</code></pre>
+    <p>を記述。</p>
+    <ul>
+      <li>
+        \(\psi\): 状態
+      </li>
+      <li>
+        \(H\): ハミルトニアン
+      </li>
+    </ul>
+    <p>\[
+    \psi(t + dt) = \exp\left(-i\frac{H}{\hbar}dt\right)\psi(t)
+\]</p>
+    <p>MathJaxのドキュメントは以下を参照。</p>
+    <div class="linkcard"><a class="linkcard-link" href="https://docs.mathjax.org/en/latest/">
+      <div class="linkcard-text">
+        <h3 class="linkcard-title">MathJax Documentation &mdash; MathJax 3.2 documentation</h3>
+        <img  class="linkcard-favicon" src="http://www.google.com/s2/favicons?domain=https://docs.mathjax.org/en/latest/"><span  class="linkcard-sitename">https://docs.mathjax.org/en/latest/</span>
+      </div>
+    </a></div>
+    <h3 id="コード">コード</h3>
+    <p>コードブロックにシンタックスハイライトを付けるには、HTMLの<code>&lt;head&gt;</code>に</p>
+    <pre><code class="language-html">&lt;link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"&gt;
+&lt;script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"&gt;&lt;/script&gt;
+&lt;script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;hljs.highlightAll();&lt;/script&gt;
+</code></pre>
+    <p>を記述。</p>
+    <pre><code class="language-c">#include &lt;stdio.h&gt;
+
+int main() {
+    printf("hello, world");
+    return 0;
+}
+</code></pre>
+    <p>highlight.jsのドキュメントは以下を参照。</p>
+    <div class="linkcard"><a class="linkcard-link" href="https://highlightjs.readthedocs.io/en/latest/">
+      <div class="linkcard-text">
+        <h3 class="linkcard-title">Highlight.js Documentation &mdash; highlight.js 11.9.0 documentation</h3>
+        <img  class="linkcard-favicon" src="http://www.google.com/s2/favicons?domain=https://highlightjs.readthedocs.io/en/latest/"><span  class="linkcard-sitename">https://highlightjs.readthedocs.io/en/latest/</span>
+      </div>
+    </a></div>
+    <p>サポート言語とテーマ。</p>
+    <ul>
+      <li>
+        <a href="https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md">highlight.js/SUPPORTED_LANGUAGES.md at main · highlightjs/highlight.js · GitHub</a>
+      </li>
+      <li>
+        <a href="https://github.com/highlightjs/highlight.js/tree/main/src/styles">highlight.js/src/styles at main · highlightjs/highlight.js · GitHub</a>
+      </li>
+      <li>
+        <a href="https://cdnjs.com/libraries/highlight.js">highlight.js - Libraries - cdnjs - The #1 free and open source CDN built to make life easier for developers</a>
+      </li>
+    </ul>
+    <h3 id="表">表</h3>
+    <table>
+      <thead>
+        <tr>
+          <td> aaa </td>
+          <td> bbb </td>
+          <td> ccc </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td> aaa </td>
+          <td> bbb </td>
+          <td> ccc </td>
+        </tr>
+        <tr>
+          <td> aaa </td>
+          <td> bbb </td>
+          <td> ccc </td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+</body>
+</html>
