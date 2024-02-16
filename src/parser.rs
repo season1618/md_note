@@ -494,8 +494,8 @@ impl<'a> Parser<'a> {
 
     fn escape(&self, c: char) -> String {
         match c {
-            '<' => "&lt;".to_string(),
-            '>' => "&gt;".to_string(),
+            '<' => String::from("&lt;"),
+            '>' => String::from("&gt;"),
             _ => c.to_string(),
         }
     }
@@ -527,21 +527,21 @@ fn uncons_except_newline<'a>(chs: &'a str) -> Option<(char, &'a str)> {
 async fn get_title(url: &String) -> String {
     let client = reqwest::Client::new();
     let Ok(res) = client.get(url).header(header::ACCEPT, header::HeaderValue::from_str("text/html").unwrap()).send().await else {
-        return "".to_string();
+        return String::new();
     };
     let Ok(body) = res.text().await else {
-        return "".to_string();
+        return String::new();
     };
     let regex = Regex::new("<title>(.*)</title>").unwrap();
     if let Some(caps) = regex.captures(&body) {
         return caps[1].to_string().clone();
     }
-    return "".to_string();
+    return String::new();
 }
 
 #[tokio::main]
 async fn get_ogp_info(url: &String) -> (String, Option<String>, Option<String>, Option<String>) {
-    let mut title = "".to_string();
+    let mut title = String::new();
     let mut image = None;
     let mut description = None;
     let mut site_name = None;
