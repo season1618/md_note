@@ -54,6 +54,12 @@ impl<'a> Parser<'a> {
     fn parse_spans(&mut self) -> Vec<Span> {
         let mut spans = Vec::new();
         while !self.chs.is_empty() && !self.next_newline() {
+            // link
+            if self.next_str("[") {
+                spans.push(self.parse_link());
+                continue;
+            }
+
             // strong
             if self.next_str("**") {
                 spans.push(self.parse_strong('*'));
@@ -96,6 +102,41 @@ impl<'a> Parser<'a> {
             spans.push(self.parse_text());
         }
         spans
+    }
+
+    fn parse_link(&mut self) -> Span {
+        let mut text = String::new();
+        let mut url = String::new();
+        let mut chs = self.chs;
+
+        loop {
+            match uncons_except_newline(chs) {
+                Some((']', rest)) => { chs = rest; break; },
+                Some((c, rest)) => { chs = rest; text.push_str(&self.escape(c)); },
+                None => { return Text { text: String::from("[") }; },
+            }
+        }
+
+        match uncons_except_newline(chs) {
+            Some(('(', rest)) => { chs = rest; },
+            _ => { return Text { text: String::from("[") }; },
+        }
+
+        loop {
+            match uncons_except_newline(chs) {
+                Some((')', rest)) => { chs = rest; break; },
+                Some((c, rest)) => { chs = rest; url.push(c); },
+                None => { return Text { text: String::from("[") }; },
+            }
+        }
+
+        self.chs = chs;
+
+        if text.is_empty() {
+            text = get_title(&url);
+        }
+
+        Link { text, url }
     }
 
     fn parse_strong(&mut self, d: char) -> Span {
@@ -233,4 +274,20 @@ fn uncons_except<'a>(chs: &'a str, except: &str) -> Option<(char, &'a str)> {
 
 fn uncons_except_newline<'a>(chs: &'a str) -> Option<(char, &'a str)> {
     uncons_except(chs, "\r\n")
+}
+
+#[tokio::main]
+async fn get_title(url: &String) -> String {
+    let client = reqwest::Client::new();
+    let Ok(res) = client.get(url).header(header::ACCEPT, header::HeaderValue::from_str("text/html").unwrap()).send().await else {
+        return "".to_string();
+    };
+    let Ok(body) = res.text().await else {
+        return "".to_string();
+    };
+    let regex = Regex::new("<title>(.*)</title>").unwrap();
+    if let Some(caps) = regex.captures(&body) {
+        return caps[1].to_string().clone();
+    }
+    return "".to_string();
 }
