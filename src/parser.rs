@@ -43,6 +43,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block(&mut self) -> Block {
+        // blockquote
+        if self.starts_with_next("> ") {
+            return self.parse_blockquote();
+        }
+
         // list
         if self.chs.starts_with("+ ") || self.chs.starts_with("- ") || self.chs.starts_with("* ") || self.starts_with_num() {
             return ListElement(self.parse_list(0));
@@ -70,6 +75,10 @@ impl<'a> Parser<'a> {
 
         // paragraph
         return self.parse_paragraph();
+    }
+
+    fn parse_blockquote(&mut self) -> Block {
+        Blockquote { spans: self.parse_spans() }
     }
 
     fn parse_list(&mut self, min_indent: usize) -> List {
