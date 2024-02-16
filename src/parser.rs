@@ -405,7 +405,7 @@ impl<'a> Parser<'a> {
 
     fn parse_text(&mut self) -> Span {
         let mut text = String::new();
-        while let Some(c) = self.next_char_except("*_$`\r\n") {
+        while let Some(c) = self.next_char_except("[*_$`\r\n") {
             text.push_str(&self.escape(c));
         }
         Text { text }
