@@ -54,6 +54,26 @@ impl<'a> Parser<'a> {
     fn parse_spans(&mut self) -> Vec<Span> {
         let mut spans = Vec::new();
         while !self.chs.is_empty() && !self.next_newline() {
+            // strong
+            if self.next_str("**") {
+                spans.push(self.parse_strong('*'));
+                continue;
+            }
+            if self.next_str("__") {
+                spans.push(self.parse_strong('_'));
+                continue;
+            }
+
+            // emphasis
+            if self.next_str("*") {
+                spans.push(self.parse_emphasis('*'));
+                continue;
+            }
+            if self.next_str("_") {
+                spans.push(self.parse_emphasis('_'));
+                continue;
+            }
+
             // math
             if self.next_str("$") {
                 spans.push(self.parse_math());
@@ -76,6 +96,38 @@ impl<'a> Parser<'a> {
             spans.push(self.parse_text());
         }
         spans
+    }
+
+    fn parse_strong(&mut self, d: char) -> Span {
+        let mut text = String::new();
+        let mut chs = self.chs;
+        while let Some((c, rest)) = uncons_except_newline(chs) {
+            if c == d {
+                self.chs = rest;
+                if self.next_str(&d.to_string()) {
+                    return Strong { text };
+                } else {
+                    return Emphasis { text };
+                }
+            }
+            chs = rest;
+            text.push_str(&self.escape(c));
+        }
+        Text { text: format!("{0}{0}", d) }
+    }
+
+    fn parse_emphasis(&mut self, d: char) -> Span {
+        let mut text = String::new();
+        let mut chs = self.chs;
+        while let Some((c, rest)) = uncons_except_newline(chs) {
+            if c == d {
+                self.chs = rest;
+                return Emphasis { text };
+            }
+            chs = rest;
+            text.push_str(&self.escape(c));
+        }
+        Text { text: d.to_string() }
     }
 
     fn parse_math(&mut self) -> Span {
@@ -122,7 +174,7 @@ impl<'a> Parser<'a> {
 
     fn parse_text(&mut self) -> Span {
         let mut text = String::new();
-        while let Some(c) = self.next_char_except("$`\r\n") {
+        while let Some(c) = self.next_char_except("*_$`\r\n") {
             text.push_str(&self.escape(c));
         }
         Text { text }
