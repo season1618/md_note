@@ -44,12 +44,12 @@ impl<'a> Parser<'a> {
 
     fn parse_block(&mut self) -> Block {
         // math block
-        if self.next_str("$$") {
+        if self.starts_with_next("$$") {
             return self.parse_math_block();
         }
 
         // code block
-        if self.next_str("```") {
+        if self.starts_with_next("```") {
             return self.parse_code_block();
         }
 
@@ -95,18 +95,18 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_table_row(&mut self) -> Option<Vec<String>> {
-        if !self.next_str("|") {
+        if !self.starts_with_next("|") {
             return None;
         }
 
         let mut row: Vec<String> = Vec::new();
-        while !self.chs.is_empty() && !self.next_newline() {
+        while !self.chs.is_empty() && !self.starts_with_newline_next() {
             let mut data = String::new();
             while let Some(c) = self.next_char_except("|\r\n") {
                 data.push_str(&self.escape(c));
             }
             row.push(data);
-            self.next_str("|");
+            self.starts_with_next("|");
         }
         if row.iter().all(|s| s.chars().all(|c| c == '-' || c == ' ')) {
             return None;
@@ -120,47 +120,47 @@ impl<'a> Parser<'a> {
 
     fn parse_spans(&mut self) -> Vec<Span> {
         let mut spans = Vec::new();
-        while !self.chs.is_empty() && !self.next_newline() {
+        while !self.chs.is_empty() && !self.starts_with_newline_next() {
             // link
-            if self.next_str("[") {
+            if self.starts_with_next("[") {
                 spans.push(self.parse_link());
                 continue;
             }
 
             // strong
-            if self.next_str("**") {
+            if self.starts_with_next("**") {
                 spans.push(self.parse_strong('*'));
                 continue;
             }
-            if self.next_str("__") {
+            if self.starts_with_next("__") {
                 spans.push(self.parse_strong('_'));
                 continue;
             }
 
             // emphasis
-            if self.next_str("*") {
+            if self.starts_with_next("*") {
                 spans.push(self.parse_emphasis('*'));
                 continue;
             }
-            if self.next_str("_") {
+            if self.starts_with_next("_") {
                 spans.push(self.parse_emphasis('_'));
                 continue;
             }
 
             // math
-            if self.next_str("$") {
+            if self.starts_with_next("$") {
                 spans.push(self.parse_math());
                 continue;
             }
 
             // code
-            if self.next_str("`") {
+            if self.starts_with_next("`") {
                 spans.push(self.parse_code());
                 continue;
             }
 
             // image
-            if self.next_str("![](") {
+            if self.starts_with_next("![](") {
                 spans.push(self.parse_image());
                 continue;
             }
@@ -212,7 +212,7 @@ impl<'a> Parser<'a> {
         while let Some((c, rest)) = uncons_except_newline(chs) {
             if c == d {
                 self.chs = rest;
-                if self.next_str(&d.to_string()) {
+                if self.starts_with_next(&d.to_string()) {
                     return Strong { text };
                 } else {
                     return Emphasis { text };
@@ -302,23 +302,6 @@ impl<'a> Parser<'a> {
         None
     }
 
-    fn next_char_until_newline(&mut self, until: &str) -> Option<char> {
-        if self.chs.starts_with("\n") {
-            self.chs = &self.chs[1..];
-            return None;
-        }
-        if self.chs.starts_with("\r\n") {
-            self.chs = &self.chs[2..];
-            return None;
-        }
-        if let Some(c) = self.chs.chars().nth(0) {
-            let i = if let Some((i, _)) = self.chs.char_indices().nth(1) { i } else { self.chs.len() };
-            self.chs = &self.chs[i..];
-            return Some(c);
-        }
-        None
-    }
-
     fn next_char_except(&mut self, except: &str) -> Option<char> {
         if let Some(c) = self.chs.chars().nth(0) {
             if !except.contains(c) {
@@ -330,7 +313,7 @@ impl<'a> Parser<'a> {
         None
     }
 
-    fn next_str(&mut self, chs: &str) -> bool {
+    fn starts_with_next(&mut self, chs: &str) -> bool {
         if self.chs.starts_with(chs) {
             let len = chs.chars().count();
             self.chs = &self.chs[len..];
@@ -339,7 +322,7 @@ impl<'a> Parser<'a> {
         false
     }
 
-    fn next_newline(&mut self) -> bool {
+    fn starts_with_newline_next(&mut self) -> bool {
         if self.chs.starts_with("\n") {
             self.chs = &self.chs[1..];
             return true;
