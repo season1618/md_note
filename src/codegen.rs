@@ -9,177 +9,192 @@ use Span::*;
 use Elem::*;
 
 pub fn gen_html(dest: &mut File, title: &String, toc: &List, content: &Vec<Block>, template: &Vec<Elem>) -> Result<(), io::Error> {
-    let datetime = Local::now();
-    for chunk in template {
-        match chunk {
-            Title => { write!(dest, "{}", title)?; },
-            Year => { write!(dest, "{:04}", datetime.year())?; },
-            Month => { write!(dest, "{:02}", datetime.month())?; },
-            Day => { write!(dest, "{:02}", datetime.day())?; },
-            Hour => { write!(dest, "{:02}", datetime.hour())?; },
-            Minute => { write!(dest, "{:02}", datetime.minute())?; },
-            Second => { write!(dest, "{:02}", datetime.second())?; },
-            Toc(indent) => { gen_toc(dest, toc, *indent)?; },
-            Content(indent) => { gen_content(dest, content, *indent)?; },
-            Str(text) => { write!(dest, "{}", text)?; },
+    let mut codegen = CodeGen::new(dest);
+    codegen.gen_html(title, toc, content, template)
+}
+
+struct CodeGen<'a> {
+    dest: &'a mut File,
+}
+
+impl<'a> CodeGen<'a> {
+    fn new(dest: &'a mut File) -> Self {
+        CodeGen { dest }
+    }
+
+    fn gen_html(&mut self, title: &String, toc: &List, content: &Vec<Block>, template: &Vec<Elem>) -> Result<(), io::Error> {
+        let datetime = Local::now();
+        for chunk in template {
+            match chunk {
+                Title => { write!(self.dest, "{}", title)?; },
+                Year => { write!(self.dest, "{:04}", datetime.year())?; },
+                Month => { write!(self.dest, "{:02}", datetime.month())?; },
+                Day => { write!(self.dest, "{:02}", datetime.day())?; },
+                Hour => { write!(self.dest, "{:02}", datetime.hour())?; },
+                Minute => { write!(self.dest, "{:02}", datetime.minute())?; },
+                Second => { write!(self.dest, "{:02}", datetime.second())?; },
+                Toc(indent) => { self.gen_toc(toc, *indent)?; },
+                Content(indent) => { self.gen_content(content, *indent)?; },
+                Str(text) => { write!(self.dest, "{}", text)?; },
+            }
         }
+        Ok(())
     }
-    Ok(())
-}
 
-fn gen_toc(dest: &mut File, toc: &List, indent: usize) -> Result<(), io::Error> {
-    writeln!(dest)?;
-    gen_list(&toc, indent, dest)
-}
+    fn gen_toc(&mut self, toc: &List, indent: usize) -> Result<(), io::Error> {
+        writeln!(self.dest)?;
+        self.gen_list(&toc, indent)
+    }
 
-fn gen_content(dest: &mut File, content: &Vec<Block>, indent: usize) -> Result<(), io::Error> {
-    writeln!(dest)?;
-    for block in content {
-        match block {
-            Header { spans, level, id } => { gen_header(spans, level, id, indent, dest)?; },
-            Blockquote { lines } => { gen_blockquote(lines, indent, dest)?; },
-            ListElement(list) => { gen_list(list, indent, dest)?; },
-            Image { url } => { gen_image(url, indent, dest)?; },
-            LinkCard { title, image, url, description, site_name } => { gen_link_card(title, image, url, description, site_name, indent, dest)?; },
-            Table { head, body } => { gen_table(head, body, indent, dest)?; },
-            Paragraph { spans } => { gen_paragraph(spans, indent, dest)?; },
-            MathBlock { math } => { gen_math_block(math, indent, dest)?; },
-            CodeBlock { lang, code } => { gen_code_block(lang, code, indent, dest)?; },
+    fn gen_content(&mut self, content: &Vec<Block>, indent: usize) -> Result<(), io::Error> {
+        writeln!(self.dest)?;
+        for block in content {
+            match block {
+                Header { spans, level, id } => { self.gen_header(spans, level, id, indent)?; },
+                Blockquote { lines } => { self.gen_blockquote(lines, indent)?; },
+                ListElement(list) => { self.gen_list(list, indent)?; },
+                Image { url } => { self.gen_image(url, indent)?; },
+                LinkCard { title, image, url, description, site_name } => { self.gen_link_card(title, image, url, description, site_name, indent)?; },
+                Table { head, body } => { self.gen_table(head, body, indent)?; },
+                Paragraph { spans } => { self.gen_paragraph(spans, indent)?; },
+                MathBlock { math } => { self.gen_math_block(math, indent)?; },
+                CodeBlock { lang, code } => { self.gen_code_block(lang, code, indent)?; },
+            }
         }
-    }
-    Ok(())
-}
-
-fn gen_header(spans: &Vec<Span>, level: &u32, id: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "{:>indent$}<h{} id=\"{}\">", " ", *level, *id)?;
-    gen_spans(spans, dest)?;
-    writeln!(dest, "</h{}>", *level)
-}
-
-fn gen_blockquote(lines: &Vec<Vec<Span>>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    writeln!(dest, "{:>indent$}<blockquote>", " ")?;
-    for spans in lines {
-        write!(dest, "{:>indent$}  <p>", " ")?;
-        gen_spans(spans, dest)?;
-        writeln!(dest, "</p>")?;
-    }
-    writeln!(dest, "{:>indent$}</blockquote>", " ")
-}
-
-fn gen_list(list: &List, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    if list.items.is_empty() {
-        return Ok(());
+        Ok(())
     }
 
-    writeln!(dest, "{:>indent$}<{}>", " ", if list.ordered { "ol" } else { "ul" })?;
-    for item in &list.items {
-        writeln!(dest, "{:>indent$}  <li>", " ")?;
+    fn gen_header(&mut self, spans: &Vec<Span>, level: &u32, id: &String, indent: usize) -> Result<(), io::Error> {
+        write!(self.dest, "{:>indent$}<h{} id=\"{}\">", " ", *level, *id)?;
+        self.gen_spans(spans)?;
+        writeln!(self.dest, "</h{}>", *level)
+    }
+
+    fn gen_blockquote(&mut self, lines: &Vec<Vec<Span>>, indent: usize) -> Result<(), io::Error> {
+        writeln!(self.dest, "{:>indent$}<blockquote>", " ")?;
+        for spans in lines {
+            write!(self.dest, "{:>indent$}  <p>", " ")?;
+            self.gen_spans(spans)?;
+            writeln!(self.dest, "</p>")?;
+        }
+        writeln!(self.dest, "{:>indent$}</blockquote>", " ")
+    }
+
+    fn gen_list(&mut self, list: &List, indent: usize) -> Result<(), io::Error> {
+        if list.items.is_empty() {
+            return Ok(());
+        }
+
+        writeln!(self.dest, "{:>indent$}<{}>", " ", if list.ordered { "ol" } else { "ul" })?;
+        for item in &list.items {
+            writeln!(self.dest, "{:>indent$}  <li>", " ")?;
+            
+            write!(self.dest, "{:>indent$}    ", " ")?;
+            self.gen_spans(&item.spans)?;
+            writeln!(self.dest)?;
+            self.gen_list(&item.list, indent + 4)?;
+            
+            writeln!(self.dest, "{:>indent$}  </li>", " ")?;
+        }
+        writeln!(self.dest, "{:>indent$}</{}>", " ", if list.ordered { "ol" } else { "ul" })
+    }
+
+    fn gen_image(&mut self, url: &String, indent: usize) -> Result<(), io::Error> {
+        writeln!(self.dest, "{:>indent$}<div class=\"image\"><img src=\"{}\"></div>", " ", *url)
+    }
+
+    fn gen_link_card(&mut self, title: &String, image: &Option<String>, url: &String, description: &Option<String>, site_name: &Option<String>, indent: usize) -> Result<(), io::Error> {
+        writeln!(self.dest, "{:>indent$}<div class=\"linkcard\"><a class=\"linkcard-link\" href=\"{}\">", "", url)?;
+        writeln!(self.dest, "{:>indent$}  <div class=\"linkcard-text\">", "")?;
+        writeln!(self.dest, "{:>indent$}    <h3 class=\"linkcard-title\">{}</h3>", "", title)?;
+        if let Some(desc) = description {
+            writeln!(self.dest, "{:>indent$}    <p class=\"linkcard-description\">{}</p>", "", desc)?;
+        }
+        writeln!(self.dest, "{:>indent$}    <img  class=\"linkcard-favicon\" src=\"http://www.google.com/s2/favicons?domain={}\"><span  class=\"linkcard-sitename\">{}</span>", "", url, site_name.clone().unwrap_or(url.clone()))?;
+        writeln!(self.dest, "{:>indent$}  </div>", "")?;
+        if let Some(img) = image {
+            writeln!(self.dest, "{:>indent$}  <img class=\"linkcard-image\" src=\"{}\">", "", img)?;
+        }
+        writeln!(self.dest, "{:>indent$}</a></div>", "")
+    }
+
+    fn gen_table(&mut self, head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, indent: usize) -> Result<(), io::Error> {
+        writeln!(self.dest, "{:>indent$}<table>", " ")?;
+
+        writeln!(self.dest, "{:>indent$}  <thead>", " ")?;
+        for row in head {
+            writeln!(self.dest, "{:>indent$}    <tr>", " ")?;
+            for data in row {
+                writeln!(self.dest, "{:>indent$}      <td>{}</td>", " ", *data)?;
+            }
+            writeln!(self.dest, "{:>indent$}    </tr>", " ")?;
+        }
+        writeln!(self.dest, "{:>indent$}  </thead>", " ")?;
         
-        write!(dest, "{:>indent$}    ", " ")?;
-        gen_spans(&item.spans, dest)?;
-        writeln!(dest)?;
-        gen_list(&item.list, indent + 4, dest)?;
+        writeln!(self.dest, "{:>indent$}  <tbody>", " ")?;
+        for row in body {
+            writeln!(self.dest, "{:>indent$}    <tr>", " ")?;
+            for data in row {
+                writeln!(self.dest, "{:>indent$}      <td>{}</td>", " ", *data)?;
+            }
+            writeln!(self.dest, "{:>indent$}    </tr>", " ")?;
+        }
+        writeln!(self.dest, "{:>indent$}  </tbody>", " ")?;
         
-        writeln!(dest, "{:>indent$}  </li>", " ")?;
+        writeln!(self.dest, "{:>indent$}</table>", " ")
     }
-    writeln!(dest, "{:>indent$}</{}>", " ", if list.ordered { "ol" } else { "ul" })
-}
 
-fn gen_image(url: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    writeln!(dest, "{:>indent$}<div class=\"image\"><img src=\"{}\"></div>", " ", *url)
-}
-
-fn gen_link_card(title: &String, image: &Option<String>, url: &String, description: &Option<String>, site_name: &Option<String>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    writeln!(dest, "{:>indent$}<div class=\"linkcard\"><a class=\"linkcard-link\" href=\"{}\">", "", url)?;
-    writeln!(dest, "{:>indent$}  <div class=\"linkcard-text\">", "")?;
-    writeln!(dest, "{:>indent$}    <h3 class=\"linkcard-title\">{}</h3>", "", title)?;
-    if let Some(desc) = description {
-        writeln!(dest, "{:>indent$}    <p class=\"linkcard-description\">{}</p>", "", desc)?;
+    fn gen_math_block(&mut self, math: &String, indent: usize) -> Result<(), io::Error> {
+        writeln!(self.dest, "{:>indent$}<p>\\[{}\\]</p>", " ", math)
     }
-    writeln!(dest, "{:>indent$}    <img  class=\"linkcard-favicon\" src=\"http://www.google.com/s2/favicons?domain={}\"><span  class=\"linkcard-sitename\">{}</span>", "", url, site_name.clone().unwrap_or(url.clone()))?;
-    writeln!(dest, "{:>indent$}  </div>", "")?;
-    if let Some(img) = image {
-        writeln!(dest, "{:>indent$}  <img class=\"linkcard-image\" src=\"{}\">", "", img)?;
+
+    fn gen_code_block(&mut self, lang: &String, code: &String, indent: usize) -> Result<(), io::Error> {
+        write!(self.dest, "{:>indent$}<pre><code class=\"language-{}\">", " ", if lang == "" { "plaintext" } else { lang })?;
+        write!(self.dest, "{}", code)?;
+        writeln!(self.dest, "</code></pre>")
     }
-    writeln!(dest, "{:>indent$}</a></div>", "")
-}
 
-fn gen_table(head: &Vec<Vec<String>>, body: &Vec<Vec<String>>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    writeln!(dest, "{:>indent$}<table>", " ")?;
+    fn gen_paragraph(&mut self, spans: &Vec<Span>, indent: usize) -> Result<(), io::Error> {
+        write!(self.dest, "{:>indent$}<p>", " ")?;
+        self.gen_spans(spans)?;
+        writeln!(self.dest, "</p>")
+    }
 
-    writeln!(dest, "{:>indent$}  <thead>", " ")?;
-    for row in head {
-        writeln!(dest, "{:>indent$}    <tr>", " ")?;
-        for data in row {
-            writeln!(dest, "{:>indent$}      <td>{}</td>", " ", *data)?;
+    fn gen_spans(&mut self, spans: &Vec<Span>) -> Result<(), io::Error> {
+        for span in spans {
+            match span {
+                Link { text, url } => { self.gen_link(text, url)?; },
+                Emphasis { text } => { self.gen_emphasis(text)?; },
+                Strong { text } => { self.gen_strong(text)?; },
+                Math { math } => { self.gen_math(math)?; },
+                Code { code } => { self.gen_code(code)?; },
+                Text { text } => { self.gen_text(text)?; },
+            }
         }
-        writeln!(dest, "{:>indent$}    </tr>", " ")?;
+        Ok(())
     }
-    writeln!(dest, "{:>indent$}  </thead>", " ")?;
-    
-    writeln!(dest, "{:>indent$}  <tbody>", " ")?;
-    for row in body {
-        writeln!(dest, "{:>indent$}    <tr>", " ")?;
-        for data in row {
-            writeln!(dest, "{:>indent$}      <td>{}</td>", " ", *data)?;
-        }
-        writeln!(dest, "{:>indent$}    </tr>", " ")?;
+
+    fn gen_link(&mut self, text: &String, url: &String) -> Result<(), io::Error> {
+        write!(self.dest, "<a href=\"{}\">{}</a>", *url, *text)
     }
-    writeln!(dest, "{:>indent$}  </tbody>", " ")?;
-    
-    writeln!(dest, "{:>indent$}</table>", " ")
-}
 
-fn gen_math_block(math: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    writeln!(dest, "{:>indent$}<p>\\[{}\\]</p>", " ", math)
-}
-
-fn gen_code_block(lang: &String, code: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "{:>indent$}<pre><code class=\"language-{}\">", " ", if lang == "" { "plaintext" } else { lang })?;
-    write!(dest, "{}", code)?;
-    writeln!(dest, "</code></pre>")
-}
-
-fn gen_paragraph(spans: &Vec<Span>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "{:>indent$}<p>", " ")?;
-    gen_spans(spans, dest)?;
-    writeln!(dest, "</p>")
-}
-
-fn gen_spans(spans: &Vec<Span>, dest: &mut File) -> Result<(), io::Error> {
-    for span in spans {
-        match span {
-            Link { text, url } => { gen_link(text, url, dest)?; },
-            Emphasis { text } => { gen_emphasis(text, dest)?; },
-            Strong { text } => { gen_strong(text, dest)?; },
-            Math { math } => { gen_math(math, dest)?; },
-            Code { code } => { gen_code(code, dest)?; },
-            Text { text } => { gen_text(text, dest)?; },
-        }
+    fn gen_emphasis(&mut self, text: &String) -> Result<(), io::Error> {
+        write!(self.dest, "<em>{}</em>", *text)
     }
-    Ok(())
-}
 
-fn gen_link(text: &String, url: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "<a href=\"{}\">{}</a>", *url, *text)
-}
+    fn gen_strong(&mut self, text: &String) -> Result<(), io::Error> {
+        write!(self.dest, "<strong>{}</strong>", *text)
+    }
 
-fn gen_emphasis(text: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "<em>{}</em>", *text)
-}
+    fn gen_math(&mut self, math: &String) -> Result<(), io::Error> {
+        write!(self.dest, "\\({}\\)", *math)
+    }
 
-fn gen_strong(text: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "<strong>{}</strong>", *text)
-}
+    fn gen_code(&mut self, code: &String) -> Result<(), io::Error> {
+        write!(self.dest, "<code>{}</code>", *code)
+    }
 
-fn gen_math(math: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "\\({}\\)", *math)
-}
-
-fn gen_code(code: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "<code>{}</code>", *code)
-}
-
-fn gen_text(text: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "{}", text)
+    fn gen_text(&mut self, text: &String) -> Result<(), io::Error> {
+        write!(self.dest, "{}", text)
+    }
 }
