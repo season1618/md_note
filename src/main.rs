@@ -26,7 +26,7 @@ fn main(){
     let (title, toc, content) = parse_markdown(&doc);
 
     let Ok(temp) = read_template(temp_path) else {
-        println!("could not open or read the destination file.");
+        println!("could not open or read the template file.");
         return;
     };
 
