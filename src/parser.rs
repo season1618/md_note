@@ -73,6 +73,11 @@ impl<'a> Parser<'a> {
             return ListElement(self.parse_list(0));
         }
 
+        // image
+        if self.starts_with_next("![](") {
+            return self.parse_image();
+        }
+
         // link card
         if self.starts_with_next("?[](") {
             return self.parse_link_card();
@@ -178,6 +183,14 @@ impl<'a> Parser<'a> {
             break;
         }
         List { ordered, items }
+    }
+
+    fn parse_image(&mut self) -> Block {
+        let mut url = String::new();
+        while let Some(c) = self.next_char_until(")") {
+            url.push(c);
+        }
+        Image { url }
     }
 
     fn parse_link_card(&mut self) -> Block {
@@ -286,12 +299,6 @@ impl<'a> Parser<'a> {
                 continue;
             }
 
-            // image
-            if self.starts_with_next("![](") {
-                spans.push(self.parse_image());
-                continue;
-            }
-
             // text
             spans.push(self.parse_text());
         }
@@ -391,20 +398,6 @@ impl<'a> Parser<'a> {
             code.push_str(&self.escape(c));
         }
         Text { text: String::from("`") }
-    }
-
-    fn parse_image(&mut self) -> Span {
-        let mut url = String::new();
-        let mut chs = self.chs;
-        while let Some((c, rest)) = uncons_except_newline(chs) {
-            if c == ')' {
-                self.chs = rest;
-                return Image { url };
-            }
-            chs = rest;
-            url.push(c);
-        }
-        Text { text: String::from("![](") }
     }
 
     fn parse_text(&mut self) -> Span {

@@ -3,6 +3,7 @@ pub enum Block {
     Header { spans: Vec<Span>, level: u32, id: String },
     Blockquote { lines: Vec<Vec<Span>> },
     ListElement(List),
+    Image { url: String },
     LinkCard { title: String, image: Option<String>, url: String, description: Option<String>, site_name: Option<String> },
     MathBlock { math: String },
     CodeBlock { lang: String, code: String },
@@ -17,7 +18,6 @@ pub enum Span {
     Strong { text: String },
     Math { math: String },
     Code { code: String },
-    Image { url: String },
     Text { text: String },
 }
 

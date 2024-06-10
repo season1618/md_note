@@ -39,6 +39,7 @@ fn gen_content(dest: &mut File, content: &Vec<Block>, indent: usize) -> Result<(
             Header { spans, level, id } => { gen_header(spans, level, id, indent, dest)?; },
             Blockquote { lines } => { gen_blockquote(lines, indent, dest)?; },
             ListElement(list) => { gen_list(list, indent, dest)?; },
+            Image { url } => { gen_image(url, indent, dest)?; },
             LinkCard { title, image, url, description, site_name } => { gen_link_card(title, image, url, description, site_name, indent, dest)?; },
             Table { head, body } => { gen_table(head, body, indent, dest)?; },
             Paragraph { spans } => { gen_paragraph(spans, indent, dest)?; },
@@ -82,6 +83,10 @@ fn gen_list(list: &List, indent: usize, dest: &mut File) -> Result<(), io::Error
         writeln!(dest, "{:>indent$}  </li>", " ")?;
     }
     writeln!(dest, "{:>indent$}</{}>", " ", if list.ordered { "ol" } else { "ul" })
+}
+
+fn gen_image(url: &String, indent: usize, dest: &mut File) -> Result<(), io::Error> {
+    writeln!(dest, "{:>indent$}<div class=\"image\"><img src=\"{}\"></div>", " ", *url)
 }
 
 fn gen_link_card(title: &String, image: &Option<String>, url: &String, description: &Option<String>, site_name: &Option<String>, indent: usize, dest: &mut File) -> Result<(), io::Error> {
@@ -149,7 +154,6 @@ fn gen_spans(spans: &Vec<Span>, dest: &mut File) -> Result<(), io::Error> {
             Strong { text } => { gen_strong(text, dest)?; },
             Math { math } => { gen_math(math, dest)?; },
             Code { code } => { gen_code(code, dest)?; },
-            Image { url } => { gen_image(url, dest)?; },
             Text { text } => { gen_text(text, dest)?; },
         }
     }
@@ -174,10 +178,6 @@ fn gen_math(math: &String, dest: &mut File) -> Result<(), io::Error> {
 
 fn gen_code(code: &String, dest: &mut File) -> Result<(), io::Error> {
     write!(dest, "<code>{}</code>", *code)
-}
-
-fn gen_image(url: &String, dest: &mut File) -> Result<(), io::Error> {
-    write!(dest, "<img src=\"{}\">", *url)
 }
 
 fn gen_text(text: &String, dest: &mut File) -> Result<(), io::Error> {
