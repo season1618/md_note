@@ -53,8 +53,13 @@ blockquote, ul, ol, p {
     margin-bottom: 0.5em;
 }
 
+.image {
+    width: 70%;
+    margin: 0 auto;
+}
+
 img {
-    width: 600px;
+    width: 100%;
 }
 
 .linkcard {
