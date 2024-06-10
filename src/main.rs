@@ -13,9 +13,10 @@ use crate::codegen::gen_html;
 
 fn main(){
     let args: Vec<String> = env::args().collect();
-    let src_path = &args[1];
-    let temp_path = &args[2];
-    let dest_path = &args[3];
+    let temp_path = &args[1];
+    let src_path = &args[2];
+    let dest_path = &format!("{}.html", src_path.trim_end_matches(".md"));
+    let dest_path = if args.len() <= 3 { &dest_path } else { &args[3] };
 
     let Ok(doc) = fs::read_to_string(src_path) else {
         println!("could not open the source file.");
