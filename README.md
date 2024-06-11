@@ -8,5 +8,5 @@ $ cargo build --release
 
 convert:
 ```
-$ md_note.exe <source>.md <template>.html <destination>.html
+$ md_note.exe <template>.html <source>.md (<destination>.html)
 ```

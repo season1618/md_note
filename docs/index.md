@@ -5,7 +5,7 @@ Rust製markdown-to-htmlパーサ。
 ## 使い方
 Markdown文書、テンプレートHTML、出力ファイルを用意して実行。
 ```
-$ <md_note> <source>.md <template>.html <destination>.html
+$ <md_note> <template>.html <source>.md (<destination>.html)
 ```
 
 ### 属性
