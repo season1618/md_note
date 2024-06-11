@@ -451,38 +451,18 @@ impl<'a> Parser<'a> {
     }
 
     fn starts_with_num(&self) -> bool {
-        let mut chs = self.chs;
-        let mut i = 0;
-        while let Some((c, rest)) = uncons(chs) {
-            if c.is_ascii_digit() {
-                chs = rest;
-                i += 1;
-                continue;
-            }
-            if i > 0 && c == '.' && rest.starts_with(" ") {
-                return true;
-            }
-            break;
-        }
-        false
+        let chs = self.chs.trim_start_matches(|c: char| c.is_ascii_digit());
+        chs.strip_prefix(". ").is_some()
     }
 
     fn starts_with_num_next(&mut self) -> bool {
-        let mut chs = self.chs;
-        let mut i = 0;
-        while let Some((c, rest)) = uncons(chs) {
-            if c.is_ascii_digit() {
-                chs = rest;
-                i += 1;
-                continue;
-            }
-            if i > 0 && c == '.' && rest.starts_with(" ") {
-                self.chs = uncons(rest).unwrap().1;
-                return true;
-            }
-            break;
+        let chs = self.chs.trim_start_matches(|c: char| c.is_ascii_digit());
+        if let Some(chs) = chs.strip_prefix(". ") {
+            self.chs = chs;
+            true
+        } else {
+            false
         }
-        false
     }
 
     fn starts_with_next(&mut self, prefix: &str) -> bool {
