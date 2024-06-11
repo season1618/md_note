@@ -485,25 +485,25 @@ impl<'a> Parser<'a> {
         false
     }
 
-    fn starts_with_next(&mut self, chs: &str) -> bool {
-        if self.chs.starts_with(chs) {
-            let len = chs.chars().count();
-            self.chs = &self.chs[len..];
-            return true;
+    fn starts_with_next(&mut self, prefix: &str) -> bool {
+        if let Some(chs) = self.chs.strip_prefix(prefix) {
+            self.chs = chs;
+            true
+        } else {
+            false
         }
-        false
     }
 
     fn starts_with_newline_next(&mut self) -> bool {
-        if self.chs.starts_with("\n") {
-            self.chs = &self.chs[1..];
-            return true;
+        if let Some(chs) = self.chs.strip_prefix("\n") {
+            self.chs = chs;
+            true
+        } else if let Some(chs) = self.chs.strip_prefix("\r\n") {
+            self.chs = chs;
+            true
+        } else {
+            false
         }
-        if self.chs.starts_with("\r\n") {
-            self.chs = &self.chs[2..];
-            return true;
-        }
-        false
     }
 
     fn escape(&self, c: char) -> String {
